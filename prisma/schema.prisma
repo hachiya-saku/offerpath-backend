@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companies Company[]
+}
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  website   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs      Job[]
+
+  @@index([userId])
+}
+
+model Job {
+  id             String    @id @default(uuid()) @db.Uuid
+  companyId      String    @db.Uuid
+  positionName   String
+  location       String?
+  platform       String
+  salaryMin      Int?
+  salaryMax      Int?
+  salaryCurrency String    @default("JPY")
+  url            String?
+  status         JobStatus @default(WISHLIST)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+  @@index([updatedAt])
+}
+
+enum JobStatus {
+  WISHLIST
+  APPLIED
+  DOCUMENT_SCREENING
+  FIRST_INTERVIEW
+  SECOND_INTERVIEW
+  THIRD_INTERVIEW
+  FINAL_INTERVIEW
+  OFFER
+  REJECTED
+}

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { DEMO_USER_EMAIL, DEMO_USER_ID } from '../src/common/constants/demo-user';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -17,11 +18,14 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const user = await prisma.user.upsert({
     where: {
-      email: 'demo@offerpath.local',
+      email: DEMO_USER_EMAIL,
     },
-    update: {},
+    update: {
+      id: DEMO_USER_ID,
+    },
     create: {
-      email: 'demo@offerpath.local',
+      id: DEMO_USER_ID,
+      email: DEMO_USER_EMAIL,
       displayName: 'OfferPath Demo User',
     },
   });

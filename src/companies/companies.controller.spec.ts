@@ -9,6 +9,8 @@ describe('CompaniesController', () => {
   const companiesServiceMock = {
     findAllByUserId: jest.fn().mockResolvedValue([]),
     createForUser: jest.fn().mockResolvedValue({ id: 'company-1' }),
+    updateForUser: jest.fn().mockResolvedValue({ id: 'company-1' }),
+    deleteForUser: jest.fn().mockResolvedValue({ id: 'company-1' }),
   };
 
   beforeEach(async () => {
@@ -51,6 +53,36 @@ describe('CompaniesController', () => {
     expect(companiesServiceMock.createForUser).toHaveBeenCalledWith(
       DEMO_USER_ID,
       dto,
+    );
+    expect(result).toEqual({ id: 'company-1' });
+  });
+
+  it('should call updateForUser with the demo user ID, company ID, and DTO', async () => {
+    const companyId = 'company-1';
+    const dto = {
+      name: 'Updated Company Name',
+      website: 'https://updated-example.com',
+      notes: 'Updated notes',
+    };
+
+    const result = await controller.update(companyId, dto);
+
+    expect(companiesServiceMock.updateForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      companyId,
+      dto,
+    );
+    expect(result).toEqual({ id: 'company-1' });
+  });
+
+  it('should call deleteForUser with the demo user ID and company ID', async () => {
+    const companyId = 'company-1';
+
+    const result = await controller.delete(companyId);
+
+    expect(companiesServiceMock.deleteForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      companyId,
     );
     expect(result).toEqual({ id: 'company-1' });
   });

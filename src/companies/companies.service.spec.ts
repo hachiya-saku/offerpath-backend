@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompaniesService } from './companies.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotFoundException } from '@nestjs/common';
 
 describe('CompaniesService', () => {
   let service: CompaniesService;
@@ -9,6 +10,9 @@ describe('CompaniesService', () => {
     company: {
       findMany: jest.fn(() => Promise.resolve([])),
       create: jest.fn(() => Promise.resolve({ id: 'company-1' })),
+      findFirst: jest.fn(() => Promise.resolve({ id: 'company-1' })),
+      update: jest.fn(() => Promise.resolve({ id: 'company-1' })),
+      delete: jest.fn(() => Promise.resolve({ id: 'company-1' })),
     },
   };
 
@@ -66,6 +70,80 @@ describe('CompaniesService', () => {
         website: dto.website,
         notes: dto.notes,
       },
+    });
+    expect(result).toEqual({ id: 'company-1' });
+  });
+
+  it('should update a company for the user', async () => {
+    const userId = 'user-1';
+    const companyId = 'company-1';
+    const dto = {
+      name: 'Updated Company Name',
+      website: 'https://updated.com',
+      notes: 'Updated notes',
+    };
+
+    const result = await service.updateForUser(userId, companyId, dto);
+
+    expect(prismaMock.company.findFirst).toHaveBeenCalledWith({
+      where: { id: companyId, userId },
+    });
+
+    expect(prismaMock.company.update).toHaveBeenCalledWith({
+      where: { id: companyId },
+      data: {
+        name: dto.name,
+        website: dto.website,
+        notes: dto.notes,
+      },
+    });
+
+    expect(result).toEqual({ id: 'company-1' });
+  });
+
+  it('should throw when updating a company that does not exist', async () => {
+    const userId = 'user-1';
+    const companyId = 'non-existent-company';
+    const dto = {
+      name: 'Updated Company Name',
+      website: 'https://updated.com',
+      notes: 'Updated notes',
+    };
+
+    prismaMock.company.findFirst.mockResolvedValueOnce(null);
+
+    await expect(service.updateForUser(userId, companyId, dto)).rejects.toThrow(
+      NotFoundException,
+    );
+
+    expect(prismaMock.company.update).not.toHaveBeenCalled();
+  });
+
+  it('should throw when deleting a company that does not exist', async () => {
+    const userId = 'user-1';
+    const companyId = 'non-existent-company';
+
+    prismaMock.company.findFirst.mockResolvedValueOnce(null);
+
+    await expect(service.deleteForUser(userId, companyId)).rejects.toThrow(
+      NotFoundException,
+    );
+
+    expect(prismaMock.company.delete).not.toHaveBeenCalled();
+  });
+
+  it('should delete a company for the user', async () => {
+    const userId = 'user-1';
+    const companyId = 'company-1';
+
+    const result = await service.deleteForUser(userId, companyId);
+
+    expect(prismaMock.company.findFirst).toHaveBeenCalledWith({
+      where: { id: companyId, userId },
+    });
+
+    expect(prismaMock.company.delete).toHaveBeenCalledWith({
+      where: { id: companyId },
     });
     expect(result).toEqual({ id: 'company-1' });
   });

@@ -104,6 +104,49 @@ describe('AppController (e2e)', () => {
     }
   });
 
+  it('/api/v1/companies/:id (PATCH, DELETE) updates and deletes a company', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/v1/companies')
+      .send({
+        name: 'E2E Update Company',
+      })
+      .expect(201);
+
+    const companyId = (createResponse.body as { id: string }).id;
+
+    try {
+      const updateResponse = await request(app.getHttpServer())
+        .patch(`/api/v1/companies/${companyId}`)
+        .send({
+          name: 'E2E Updated Company',
+          notes: 'Updated by E2E test',
+        })
+        .expect(200);
+
+      expect(updateResponse.body).toMatchObject({
+        id: companyId,
+        name: 'E2E Updated Company',
+        notes: 'Updated by E2E test',
+      });
+
+      const deleteResponse = await request(app.getHttpServer())
+        .delete(`/api/v1/companies/${companyId}`)
+        .expect(200);
+
+      expect(deleteResponse.body).toMatchObject({
+        id: companyId,
+        name: 'E2E Updated Company',
+      });
+    } finally {
+      await prisma.company.deleteMany({
+        where: {
+          id: companyId,
+          userId: DEMO_USER_ID,
+        },
+      });
+    }
+  });
+
   afterEach(async () => {
     await app.close();
   });

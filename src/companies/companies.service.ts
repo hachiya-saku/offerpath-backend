@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { normalizeCompanyName } from './company-name';
 
 @Injectable()
 export class CompaniesService {
@@ -19,6 +20,7 @@ export class CompaniesService {
       data: {
         userId,
         name: dto.name,
+        normalizedName: normalizeCompanyName(dto.name),
         website: dto.website,
         notes: dto.notes,
       },
@@ -42,6 +44,7 @@ export class CompaniesService {
       where: { id: companyId },
       data: {
         name: dto.name,
+        normalizedName: dto.name ? normalizeCompanyName(dto.name) : undefined,
         website: dto.website,
         notes: dto.notes,
       },

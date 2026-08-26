@@ -67,6 +67,7 @@ describe('CompaniesService', () => {
       data: {
         userId,
         name: dto.name,
+        normalizedName: 'offerpath inc.',
         website: dto.website,
         notes: dto.notes,
       },
@@ -93,6 +94,7 @@ describe('CompaniesService', () => {
       where: { id: companyId },
       data: {
         name: dto.name,
+        normalizedName: 'updated company name',
         website: dto.website,
         notes: dto.notes,
       },

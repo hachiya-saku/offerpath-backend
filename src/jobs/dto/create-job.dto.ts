@@ -12,8 +12,15 @@ import {
 import { JobStatus } from '../../../generated/prisma/enums';
 
 export class CreateJobDto {
+  @IsOptional()
   @IsUUID()
-  companyId!: string;
+  companyId?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(160)
+  companyName?: string;
 
   @IsString()
   @IsNotEmpty()

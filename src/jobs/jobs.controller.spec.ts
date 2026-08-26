@@ -1,15 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
+import { DEMO_USER_ID } from '../common/constants/demo-user';
 
 describe('JobsController', () => {
   let controller: JobsController;
 
   const jobsServiceMock = {
     createForUser: jest.fn(),
+    findAllByUserId: jest.fn(),
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       controllers: [JobsController],
       providers: [{ provide: JobsService, useValue: jobsServiceMock }],
@@ -20,5 +23,29 @@ describe('JobsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should call createForUser with the correct parameters', async () => {
+    const dto = {
+      companyId: 'company-1',
+      positionName: 'Software Engineer',
+      platform: 'LinkedIn',
+    };
+
+    await controller.create(dto);
+
+    expect(jobsServiceMock.createForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      dto,
+    );
+  });
+
+  it('should call findAllByUserId with the correct parameters', async () => {
+    jobsServiceMock.findAllByUserId.mockResolvedValue([]);
+    const result = await controller.findAll();
+
+    expect(jobsServiceMock.findAllByUserId).toHaveBeenCalledWith(DEMO_USER_ID);
+
+    expect(result).toEqual([]);
   });
 });

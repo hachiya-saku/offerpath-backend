@@ -68,4 +68,19 @@ export class JobsService {
       },
     });
   }
+
+  findAllByUserId(userId: string) {
+    return this.prisma.job.findMany({
+      where: { company: { userId } },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
 }

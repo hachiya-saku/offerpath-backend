@@ -10,7 +10,7 @@ describe('JobsService', () => {
       findFirst: jest.fn(),
       create: jest.fn(),
     },
-    job: { create: jest.fn() },
+    job: { create: jest.fn(), findMany: jest.fn() },
   };
 
   beforeEach(async () => {
@@ -157,5 +157,28 @@ describe('JobsService', () => {
     );
 
     expect(prismaMock.job.create).not.toHaveBeenCalled();
+  });
+
+  it('should find jobs belonging to the user', async () => {
+    const userId = 'user-1';
+
+    prismaMock.job.findMany.mockResolvedValue([]);
+
+    const result = await service.findAllByUserId(userId);
+
+    expect(prismaMock.job.findMany).toHaveBeenCalledWith({
+      where: { company: { userId } },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    expect(result).toEqual([]);
   });
 });

@@ -10,6 +10,7 @@ describe('JobsController', () => {
     createForUser: jest.fn(),
     findAllByUserId: jest.fn(),
     findOneByUserIdAndJobId: jest.fn(),
+    updateJobForUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -62,5 +63,22 @@ describe('JobsController', () => {
     );
 
     expect(result).toEqual({ id: jobId });
+  });
+
+  it('should update a job for the demo user', async () => {
+    const jobId = 'job-1';
+    const dto = { positionName: 'Senior Frontend Engineer' };
+    const updatedJob = { id: jobId, ...dto };
+
+    jobsServiceMock.updateJobForUser.mockResolvedValue(updatedJob);
+
+    const result = await controller.update(jobId, dto);
+
+    expect(jobsServiceMock.updateJobForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      jobId,
+      dto,
+    );
+    expect(result).toEqual(updatedJob);
   });
 });

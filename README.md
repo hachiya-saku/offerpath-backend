@@ -14,10 +14,11 @@ OfferPath Backend は、求職管理プラットフォーム OfferPath の REST 
 | フレームワーク | NestJS 11 |
 | 言語 | TypeScript |
 | データベース | PostgreSQL 18 |
+| ORM | Prisma 7 |
 | テスト | Jest / Supertest |
 | パッケージ管理 | npm |
 
-ORM はデータモデル設計時に選定します。現時点では TypeORM や Prisma を導入していません。
+Prisma のマイグレーションとシードを使用して、PostgreSQL のスキーマと開発用データを管理します。
 
 ## 現在の状態
 
@@ -26,8 +27,26 @@ ORM はデータモデル設計時に選定します。現時点では TypeORM �
 - API プレフィックス: `/api/v1`
 - フロントエンド向け CORS 設定
 - ヘルスチェック: `GET /api/v1/health`
-- 環境変数テンプレート
-- Unit / E2E テスト
+- User / Company / Job データモデルとマイグレーション
+- Company CRUD API
+- Job 作成・一覧・詳細・更新 API
+- Unit / E2E テスト（Jest / Supertest）
+
+## API
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/health` | ヘルスチェック |
+| `GET` | `/api/v1/companies` | 会社一覧 |
+| `POST` | `/api/v1/companies` | 会社作成 |
+| `PATCH` | `/api/v1/companies/:id` | 会社更新 |
+| `DELETE` | `/api/v1/companies/:id` | 会社削除 |
+| `POST` | `/api/v1/jobs` | 求人作成（会社を検索または自動作成） |
+| `GET` | `/api/v1/jobs` | 求人一覧 |
+| `GET` | `/api/v1/jobs/:id` | 求人詳細 |
+| `PATCH` | `/api/v1/jobs/:id` | 求人更新 |
+
+認証実装前のため、ユーザー単位の API は現在シード済みのデモユーザーを使用します。
 
 ## セットアップ
 
@@ -57,10 +76,10 @@ npm run test:e2e
 
 ## 開発予定
 
-1. データモデルと ORM の選定
-2. PostgreSQL 接続とマイグレーション
-3. ユーザー認証と Token 管理
-4. 求人 CRUD とステータス履歴
+1. 求人削除 API と Job E2E テスト
+2. ユーザー認証と Token 管理
+3. 求人検索・絞り込み・ページネーション
+4. 応募ステータス履歴
 5. スキルプロフィールとマッチ度計算
 6. ダッシュボード集計 API
 

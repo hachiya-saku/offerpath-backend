@@ -14,10 +14,11 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 | 后端框架 | NestJS 11 |
 | 语言 | TypeScript |
 | 数据库 | PostgreSQL 18 |
+| ORM | Prisma 7 |
 | 测试 | Jest / Supertest |
 | 包管理 | npm |
 
-ORM 将在设计数据模型时确定，目前没有擅自引入 TypeORM 或 Prisma。
+项目通过 Prisma 迁移和种子脚本管理 PostgreSQL 表结构与本地开发数据。
 
 ## 当前完成
 
@@ -26,8 +27,26 @@ ORM 将在设计数据模型时确定，目前没有擅自引入 TypeORM 或 Pri
 - API 前缀：`/api/v1`
 - 面向前端开发环境的 CORS 配置
 - 健康检查：`GET /api/v1/health`
-- 环境变量示例
-- 单元测试与 E2E 测试
+- User / Company / Job 数据模型与迁移
+- Company CRUD 接口
+- Job 创建、列表、详情与更新接口
+- Jest 单元测试与 Supertest E2E 测试
+
+## API
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/v1/health` | 健康检查 |
+| `GET` | `/api/v1/companies` | 公司列表 |
+| `POST` | `/api/v1/companies` | 创建公司 |
+| `PATCH` | `/api/v1/companies/:id` | 更新公司 |
+| `DELETE` | `/api/v1/companies/:id` | 删除公司 |
+| `POST` | `/api/v1/jobs` | 创建岗位（查找或自动创建公司） |
+| `GET` | `/api/v1/jobs` | 岗位列表 |
+| `GET` | `/api/v1/jobs/:id` | 岗位详情 |
+| `PATCH` | `/api/v1/jobs/:id` | 更新岗位 |
+
+用户认证尚未接入，因此当前需要用户身份的接口使用种子数据中的演示用户。
 
 ## 本地运行
 
@@ -60,9 +79,9 @@ npm run test:e2e
 
 ## 后续开发顺序
 
-1. 设计数据模型并选择 ORM
-2. 接入 PostgreSQL 与数据库迁移
-3. 用户认证和 Token 管理
-4. 岗位 CRUD 与状态变更历史
+1. 岗位删除接口与 Job E2E 测试
+2. 用户认证和 Token 管理
+3. 岗位搜索、筛选与分页
+4. 投递状态变更历史
 5. 技术栈档案与匹配度计算
 6. 仪表盘统计接口

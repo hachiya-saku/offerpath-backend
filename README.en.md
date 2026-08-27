@@ -14,10 +14,11 @@ Frontend repository: [offerpath-frontend](https://github.com/hachiya-saku/offerp
 | Framework | NestJS 11 |
 | Language | TypeScript |
 | Database | PostgreSQL 18 |
+| ORM | Prisma 7 |
 | Testing | Jest / Supertest |
 | Package manager | npm |
 
-The ORM will be selected while designing the data model. TypeORM and Prisma have intentionally not been added yet.
+Prisma migrations and seed scripts manage the PostgreSQL schema and local development data.
 
 ## Current foundation
 
@@ -26,8 +27,26 @@ The ORM will be selected while designing the data model. TypeORM and Prisma have
 - Global API prefix: `/api/v1`
 - CORS configuration for the frontend development server
 - Health endpoint: `GET /api/v1/health`
-- Environment variable template
-- Unit and E2E tests
+- User, Company, and Job models with database migrations
+- Company CRUD API
+- Job create, list, detail, and update APIs
+- Unit and E2E tests with Jest and Supertest
+
+## API
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/health` | Health check |
+| `GET` | `/api/v1/companies` | List companies |
+| `POST` | `/api/v1/companies` | Create a company |
+| `PATCH` | `/api/v1/companies/:id` | Update a company |
+| `DELETE` | `/api/v1/companies/:id` | Delete a company |
+| `POST` | `/api/v1/jobs` | Create a job and resolve its company |
+| `GET` | `/api/v1/jobs` | List jobs |
+| `GET` | `/api/v1/jobs/:id` | Get job details |
+| `PATCH` | `/api/v1/jobs/:id` | Update a job |
+
+Authentication is not connected yet, so user-scoped endpoints currently use the seeded demo user.
 
 ## Setup
 
@@ -60,9 +79,9 @@ npm run test:e2e
 
 ## Planned development
 
-1. Design the data model and select an ORM
-2. Add PostgreSQL connectivity and migrations
-3. Implement authentication and token management
-4. Implement job CRUD and status history
+1. Add the job deletion API and Job E2E coverage
+2. Implement authentication and token management
+3. Add job search, filtering, and pagination
+4. Add application status history
 5. Add skill profiles and match score calculation
 6. Add dashboard aggregation endpoints

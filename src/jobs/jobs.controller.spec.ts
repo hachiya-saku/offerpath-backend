@@ -9,6 +9,7 @@ describe('JobsController', () => {
   const jobsServiceMock = {
     createForUser: jest.fn(),
     findAllByUserId: jest.fn(),
+    findOneByUserIdAndJobId: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -47,5 +48,19 @@ describe('JobsController', () => {
     expect(jobsServiceMock.findAllByUserId).toHaveBeenCalledWith(DEMO_USER_ID);
 
     expect(result).toEqual([]);
+  });
+
+  it('should call findOneByUserIdAndJobId with the correct parameters', async () => {
+    const jobId = 'job-1';
+    jobsServiceMock.findOneByUserIdAndJobId.mockResolvedValue({ id: jobId });
+
+    const result = await controller.findOne(jobId);
+
+    expect(jobsServiceMock.findOneByUserIdAndJobId).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      jobId,
+    );
+
+    expect(result).toEqual({ id: jobId });
   });
 });

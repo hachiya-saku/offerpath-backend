@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { normalizeCompanyName } from '../companies/company-name';
+import { UpdateJobDto } from './dto/update-job.dto';
 
 @Injectable()
 export class JobsService {
@@ -81,6 +82,89 @@ export class JobsService {
         },
       },
       orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  async findOneByUserIdAndJobId(userId: string, jobId: string) {
+    const result = await this.prisma.job.findFirst({
+      where: {
+        id: jobId,
+        company: { userId },
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!result) {
+      throw new NotFoundException('Job not found');
+    }
+
+    return result;
+  }
+
+  async updateJobForUser(userId: string, jobId: string, dto: UpdateJobDto) {
+    const { companyId, companyName, ...jobData } = dto;
+    let finalCompanyId: string | undefined;
+
+    const job = await this.prisma.job.findFirst({
+      where: {
+        id: jobId,
+        company: { userId },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (companyId) {
+      const company = await this.prisma.company.findFirst({
+        where: {
+          id: companyId,
+          userId,
+        },
+      });
+
+      if (!company) {
+        throw new NotFoundException('Company not found');
+      }
+
+      finalCompanyId = companyId;
+    } else if (companyName) {
+      const normalizedCompanyName = normalizeCompanyName(companyName);
+
+      let company = await this.prisma.company.findFirst({
+        where: {
+          normalizedName: normalizedCompanyName,
+          userId,
+        },
+      });
+
+      if (!company) {
+        company = await this.prisma.company.create({
+          data: {
+            userId,
+            name: companyName,
+            normalizedName: normalizedCompanyName,
+          },
+        });
+      }
+
+      finalCompanyId = company.id;
+    }
+
+    return this.prisma.job.update({
+      where: { id: jobId },
+      data: {
+        ...jobData,
+        companyId: finalCompanyId,
+      },
     });
   }
 }

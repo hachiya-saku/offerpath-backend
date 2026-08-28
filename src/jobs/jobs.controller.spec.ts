@@ -11,6 +11,7 @@ describe('JobsController', () => {
     findAllByUserId: jest.fn(),
     findOneByUserIdAndJobId: jest.fn(),
     updateJobForUser: jest.fn(),
+    deleteJobForUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -80,5 +81,20 @@ describe('JobsController', () => {
       dto,
     );
     expect(result).toEqual(updatedJob);
+  });
+
+  it('should delete a job for the demo user', async () => {
+    const jobId = 'job-1';
+    const deletedJob = { id: jobId };
+
+    jobsServiceMock.deleteJobForUser.mockResolvedValue(deletedJob);
+
+    const result = await controller.delete(jobId);
+
+    expect(jobsServiceMock.deleteJobForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      jobId,
+    );
+    expect(result).toEqual(deletedJob);
   });
 });

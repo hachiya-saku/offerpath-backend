@@ -167,4 +167,21 @@ export class JobsService {
       },
     });
   }
+
+  async deleteJobForUser(userId: string, jobId: string) {
+    const job = await this.prisma.job.findFirst({
+      where: {
+        id: jobId,
+        company: { userId },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    return this.prisma.job.delete({
+      where: { id: jobId },
+    });
+  }
 }

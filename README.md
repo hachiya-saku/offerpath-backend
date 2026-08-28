@@ -29,7 +29,7 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 - ヘルスチェック: `GET /api/v1/health`
 - User / Company / Job データモデルとマイグレーション
 - Company CRUD API
-- Job 作成・一覧・詳細・更新 API
+- Job CRUD API
 - Unit / E2E テスト（Jest / Supertest）
 
 ## API
@@ -45,6 +45,7 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 | `GET` | `/api/v1/jobs` | 求人一覧 |
 | `GET` | `/api/v1/jobs/:id` | 求人詳細 |
 | `PATCH` | `/api/v1/jobs/:id` | 求人更新 |
+| `DELETE` | `/api/v1/jobs/:id` | 求人削除 |
 
 認証実装前のため、ユーザー単位の API は現在シード済みのデモユーザーを使用します。
 
@@ -76,12 +77,11 @@ npm run test:e2e
 
 ## 開発予定
 
-1. 求人削除 API と Job E2E テスト
-2. ユーザー認証と Token 管理
-3. 求人検索・絞り込み・ページネーション
-4. 応募ステータス履歴
-5. スキルプロフィールとマッチ度計算
-6. ダッシュボード集計 API
+1. ユーザー認証と Token 管理
+2. 求人検索・絞り込み・ページネーション
+3. 応募ステータス履歴
+4. スキルプロフィールとマッチ度計算
+5. ダッシュボード集計 API
 
 ## リポジトリ構成
 

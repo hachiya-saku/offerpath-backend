@@ -29,7 +29,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 - Health endpoint: `GET /api/v1/health`
 - User, Company, and Job models with database migrations
 - Company CRUD API
-- Job create, list, detail, and update APIs
+- Complete Job CRUD APIs
 - Unit and E2E tests with Jest and Supertest
 
 ## API
@@ -45,6 +45,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | `GET` | `/api/v1/jobs` | List jobs |
 | `GET` | `/api/v1/jobs/:id` | Get job details |
 | `PATCH` | `/api/v1/jobs/:id` | Update a job |
+| `DELETE` | `/api/v1/jobs/:id` | Delete a job |
 
 Authentication is not connected yet, so user-scoped endpoints currently use the seeded demo user.
 
@@ -79,9 +80,8 @@ npm run test:e2e
 
 ## Planned development
 
-1. Add the job deletion API and Job E2E coverage
-2. Implement authentication and token management
-3. Add job search, filtering, and pagination
-4. Add application status history
-5. Add skill profiles and match score calculation
-6. Add dashboard aggregation endpoints
+1. Implement authentication and token management
+2. Add job search, filtering, and pagination
+3. Add application status history
+4. Add skill profiles and match score calculation
+5. Add dashboard aggregation endpoints

@@ -147,6 +147,104 @@ describe('AppController (e2e)', () => {
     }
   });
 
+  it('/api/v1/jobs completes the job CRUD lifecycle', async () => {
+    const companyName = `E2E Job Company ${Date.now()}`;
+    let companyId: string | undefined;
+    let jobId: string | undefined;
+
+    try {
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/v1/jobs')
+        .send({
+          companyName,
+          positionName: 'Frontend Engineer',
+          platform: 'Green',
+          location: 'Tokyo',
+          salaryMin: 500,
+          salaryMax: 700,
+          salaryCurrency: 'JPY',
+          status: 'WISHLIST',
+        })
+        .expect(201);
+
+      jobId = (createResponse.body as { id: string }).id;
+      companyId = (createResponse.body as { companyId: string }).companyId;
+
+      expect(createResponse.body).toMatchObject({
+        id: jobId,
+        companyId,
+        positionName: 'Frontend Engineer',
+        status: 'WISHLIST',
+      });
+
+      const listResponse = await request(app.getHttpServer())
+        .get('/api/v1/jobs')
+        .expect(200);
+      const listedJobs = listResponse.body as Array<{
+        id: string;
+        company: { name: string };
+      }>;
+
+      expect(
+        listedJobs.some(
+          (job) => job.id === jobId && job.company.name === companyName,
+        ),
+      ).toBe(true);
+
+      const detailResponse = await request(app.getHttpServer())
+        .get(`/api/v1/jobs/${jobId}`)
+        .expect(200);
+      const jobDetail = detailResponse.body as {
+        id: string;
+        company: { name: string };
+      };
+
+      expect(jobDetail.id).toBe(jobId);
+      expect(jobDetail.company.name).toBe(companyName);
+
+      const updateResponse = await request(app.getHttpServer())
+        .patch(`/api/v1/jobs/${jobId}`)
+        .send({
+          positionName: 'Senior Frontend Engineer',
+          status: 'APPLIED',
+        })
+        .expect(200);
+
+      expect(updateResponse.body).toMatchObject({
+        id: jobId,
+        positionName: 'Senior Frontend Engineer',
+        status: 'APPLIED',
+      });
+
+      const deleteResponse = await request(app.getHttpServer())
+        .delete(`/api/v1/jobs/${jobId}`)
+        .expect(200);
+      const deletedJob = deleteResponse.body as {
+        id: string;
+        positionName: string;
+      };
+
+      expect(deletedJob).toMatchObject({
+        id: jobId,
+        positionName: 'Senior Frontend Engineer',
+      });
+      jobId = undefined;
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/jobs/${deletedJob.id}`)
+        .expect(404);
+    } finally {
+      if (jobId) {
+        await prisma.job.deleteMany({ where: { id: jobId } });
+      }
+      if (companyId) {
+        await prisma.company.deleteMany({
+          where: { id: companyId, userId: DEMO_USER_ID },
+        });
+      }
+    }
+  });
+
   afterEach(async () => {
     await app.close();
   });

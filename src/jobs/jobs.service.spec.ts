@@ -17,6 +17,7 @@ describe('JobsService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
   };
 
@@ -352,5 +353,34 @@ describe('JobsService', () => {
       where: { id: 'job-1' },
       data: { companyId: 'company-3' },
     });
+  });
+
+  it('should delete a job belonging to the user', async () => {
+    const userId = 'user-1';
+    const jobId = 'job-1';
+    const deletedJob = { id: jobId, positionName: 'Frontend Engineer' };
+
+    prismaMock.job.findFirst.mockResolvedValue({ id: jobId });
+    prismaMock.job.delete.mockResolvedValue(deletedJob);
+
+    const result = await service.deleteJobForUser(userId, jobId);
+
+    expect(prismaMock.job.findFirst).toHaveBeenCalledWith({
+      where: { id: jobId, company: { userId } },
+    });
+    expect(prismaMock.job.delete).toHaveBeenCalledWith({
+      where: { id: jobId },
+    });
+    expect(result).toEqual(deletedJob);
+  });
+
+  it('should reject deleting a job that does not belong to the user', async () => {
+    prismaMock.job.findFirst.mockResolvedValue(null);
+
+    await expect(service.deleteJobForUser('user-1', 'job-1')).rejects.toThrow(
+      NotFoundException,
+    );
+
+    expect(prismaMock.job.delete).not.toHaveBeenCalled();
   });
 });

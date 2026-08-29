@@ -30,6 +30,7 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 - User / Company / Job 数据模型与迁移
 - Company CRUD 接口
 - Job 完整 CRUD 接口
+- 邮箱注册、密码登录与 Access Token 签发
 - Jest 单元测试与 Supertest E2E 测试
 
 ## API
@@ -37,6 +38,8 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | 健康检查 |
+| `POST` | `/api/v1/auth/register` | 用户注册 |
+| `POST` | `/api/v1/auth/login` | 登录并签发 Access Token |
 | `GET` | `/api/v1/companies` | 公司列表 |
 | `POST` | `/api/v1/companies` | 创建公司 |
 | `PATCH` | `/api/v1/companies/:id` | 更新公司 |
@@ -47,7 +50,7 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 | `PATCH` | `/api/v1/jobs/:id` | 更新岗位 |
 | `DELETE` | `/api/v1/jobs/:id` | 删除岗位 |
 
-用户认证尚未接入，因此当前需要用户身份的接口使用种子数据中的演示用户。
+Company / Job 接口尚未接入认证守卫，因此当前仍使用种子数据中的演示用户。
 
 ## 本地运行
 
@@ -80,7 +83,7 @@ npm run test:e2e
 
 ## 后续开发顺序
 
-1. 用户认证和 Token 管理
+1. Refresh Token、退出登录与认证守卫
 2. 岗位搜索、筛选与分页
 3. 投递状态变更历史
 4. 技术栈档案与匹配度计算

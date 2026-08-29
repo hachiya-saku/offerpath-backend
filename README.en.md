@@ -30,6 +30,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 - User, Company, and Job models with database migrations
 - Company CRUD API
 - Complete Job CRUD APIs
+- Email registration, password login, and access token issuance
 - Unit and E2E tests with Jest and Supertest
 
 ## API
@@ -37,6 +38,8 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Health check |
+| `POST` | `/api/v1/auth/register` | Register a user |
+| `POST` | `/api/v1/auth/login` | Log in and issue an access token |
 | `GET` | `/api/v1/companies` | List companies |
 | `POST` | `/api/v1/companies` | Create a company |
 | `PATCH` | `/api/v1/companies/:id` | Update a company |
@@ -47,7 +50,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | `PATCH` | `/api/v1/jobs/:id` | Update a job |
 | `DELETE` | `/api/v1/jobs/:id` | Delete a job |
 
-Authentication is not connected yet, so user-scoped endpoints currently use the seeded demo user.
+Authentication guards are not connected to the Company and Job APIs yet, so those endpoints still use the seeded demo user.
 
 ## Setup
 
@@ -80,7 +83,7 @@ npm run test:e2e
 
 ## Planned development
 
-1. Implement authentication and token management
+1. Add refresh tokens, logout, and authentication guards
 2. Add job search, filtering, and pagination
 3. Add application status history
 4. Add skill profiles and match score calculation

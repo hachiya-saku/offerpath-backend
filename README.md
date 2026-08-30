@@ -31,6 +31,7 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 - Company CRUD API
 - Job CRUD API
 - メール登録、パスワードログイン、Access Token 発行
+- 面接予定の登録・一覧取得と求人ステータスの連動更新
 - Unit / E2E テスト（Jest / Supertest）
 
 ## API
@@ -49,6 +50,8 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 | `GET` | `/api/v1/jobs/:id` | 求人詳細 |
 | `PATCH` | `/api/v1/jobs/:id` | 求人更新 |
 | `DELETE` | `/api/v1/jobs/:id` | 求人削除 |
+| `POST` | `/api/v1/jobs/:id/interviews` | 次回面接を登録してステータスを更新 |
+| `GET` | `/api/v1/interviews` | 面接予定一覧 |
 
 Company / Job API への認証ガード接続前のため、これらの API は現在シード済みのデモユーザーを使用します。
 

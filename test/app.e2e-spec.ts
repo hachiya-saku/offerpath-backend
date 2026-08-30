@@ -245,6 +245,67 @@ describe('AppController (e2e)', () => {
     }
   });
 
+  it('/api/v1/jobs/:jobId/interviews schedules and lists an interview', async () => {
+    let companyId: string | undefined;
+    let jobId: string | undefined;
+
+    try {
+      const jobResponse = await request(app.getHttpServer())
+        .post('/api/v1/jobs')
+        .send({
+          companyName: `E2E Interview Company ${Date.now()}`,
+          positionName: 'Frontend Engineer',
+          platform: 'Green',
+          status: 'DOCUMENT_SCREENING',
+        })
+        .expect(201);
+      const createdJob = jobResponse.body as {
+        id: string;
+        companyId: string;
+      };
+      jobId = createdJob.id;
+      companyId = createdJob.companyId;
+
+      const interviewResponse = await request(app.getHttpServer())
+        .post(`/api/v1/jobs/${jobId}/interviews`)
+        .send({
+          round: 'FIRST_INTERVIEW',
+          mode: 'OFFLINE',
+          scheduledAt: '2026-09-15T14:00:00+09:00',
+          location: '東京都千代田区丸の内1丁目',
+        })
+        .expect(201);
+      const interview = interviewResponse.body as {
+        id: string;
+        jobId: string;
+        round: string;
+        mode: string;
+      };
+
+      expect(interview).toMatchObject({
+        jobId,
+        round: 'FIRST_INTERVIEW',
+        mode: 'OFFLINE',
+      });
+
+      const updatedJob = await prisma.job.findUnique({ where: { id: jobId } });
+      expect(updatedJob?.status).toBe('FIRST_INTERVIEW');
+
+      const listResponse = await request(app.getHttpServer())
+        .get('/api/v1/interviews')
+        .expect(200);
+      const interviews = listResponse.body as Array<{ id: string }>;
+      expect(interviews.some((item) => item.id === interview.id)).toBe(true);
+    } finally {
+      if (jobId) await prisma.job.deleteMany({ where: { id: jobId } });
+      if (companyId) {
+        await prisma.company.deleteMany({
+          where: { id: companyId, userId: DEMO_USER_ID },
+        });
+      }
+    }
+  });
+
   afterEach(async () => {
     await app.close();
   });

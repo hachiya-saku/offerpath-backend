@@ -1,0 +1,126 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { InterviewMode, JobStatus } from '../../generated/prisma/enums';
+import { PrismaService } from '../prisma/prisma.service';
+import { InterviewsService } from './interviews.service';
+
+describe('InterviewsService', () => {
+  let service: InterviewsService;
+  const prismaMock = {
+    job: { findFirst: jest.fn(), update: jest.fn() },
+    interview: { findMany: jest.fn(), create: jest.fn() },
+    $transaction: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        InterviewsService,
+        { provide: PrismaService, useValue: prismaMock },
+      ],
+    }).compile();
+    service = module.get(InterviewsService);
+  });
+
+  it('should list interviews belonging to the user', async () => {
+    prismaMock.interview.findMany.mockResolvedValue([]);
+
+    await expect(service.findAllForUser('user-1')).resolves.toEqual([]);
+    expect(prismaMock.interview.findMany).toHaveBeenCalledWith({
+      where: { job: { company: { userId: 'user-1' } } },
+      include: {
+        job: {
+          select: {
+            id: true,
+            positionName: true,
+            company: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { scheduledAt: 'asc' },
+    });
+  });
+
+  it('should create an online interview and advance the job status', async () => {
+    const dto = {
+      round: JobStatus.FIRST_INTERVIEW,
+      mode: InterviewMode.ONLINE,
+      scheduledAt: '2026-09-01T10:00:00+09:00',
+      platform: 'Zoom',
+      meetingId: '123-456',
+    };
+    const interview = { id: 'interview-1', jobId: 'job-1', ...dto };
+    prismaMock.job.findFirst.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.DOCUMENT_SCREENING,
+    });
+    prismaMock.interview.create.mockReturnValue(interview);
+    prismaMock.job.update.mockReturnValue({
+      id: 'job-1',
+      status: dto.round,
+    });
+    prismaMock.$transaction.mockResolvedValue([interview, {}]);
+
+    await expect(service.createForJob('user-1', 'job-1', dto)).resolves.toEqual(
+      interview,
+    );
+    expect(prismaMock.interview.create).toHaveBeenCalledWith({
+      data: {
+        jobId: 'job-1',
+        round: JobStatus.FIRST_INTERVIEW,
+        mode: InterviewMode.ONLINE,
+        scheduledAt: new Date(dto.scheduledAt),
+        platform: 'Zoom',
+        meetingUrl: undefined,
+        meetingId: '123-456',
+        meetingPassword: undefined,
+        location: null,
+        notes: undefined,
+      },
+      include: {
+        job: {
+          select: {
+            id: true,
+            positionName: true,
+            company: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    expect(prismaMock.job.update).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: { status: JobStatus.FIRST_INTERVIEW },
+    });
+  });
+
+  it('should reject a skipped interview round', async () => {
+    prismaMock.job.findFirst.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.DOCUMENT_SCREENING,
+    });
+
+    await expect(
+      service.createForJob('user-1', 'job-1', {
+        round: JobStatus.SECOND_INTERVIEW,
+        mode: InterviewMode.OFFLINE,
+        scheduledAt: '2026-09-01T10:00:00+09:00',
+        location: 'Tokyo',
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('should reject a job that does not belong to the user', async () => {
+    prismaMock.job.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createForJob('user-1', 'job-1', {
+        round: JobStatus.FIRST_INTERVIEW,
+        mode: InterviewMode.OFFLINE,
+        scheduledAt: '2026-09-01T10:00:00+09:00',
+        location: 'Tokyo',
+      }),
+    ).rejects.toThrow(NotFoundException);
+  });
+});

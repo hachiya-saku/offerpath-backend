@@ -7,12 +7,13 @@ import { JobStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 
-const nextInterviewStatus: Partial<Record<JobStatus, JobStatus>> = {
-  [JobStatus.DOCUMENT_SCREENING]: JobStatus.FIRST_INTERVIEW,
-  [JobStatus.FIRST_INTERVIEW]: JobStatus.SECOND_INTERVIEW,
-  [JobStatus.SECOND_INTERVIEW]: JobStatus.THIRD_INTERVIEW,
-  [JobStatus.THIRD_INTERVIEW]: JobStatus.FINAL_INTERVIEW,
-};
+const interviewStatusOrder = [
+  JobStatus.DOCUMENT_SCREENING,
+  JobStatus.FIRST_INTERVIEW,
+  JobStatus.SECOND_INTERVIEW,
+  JobStatus.THIRD_INTERVIEW,
+  JobStatus.FINAL_INTERVIEW,
+] as const;
 
 @Injectable()
 export class InterviewsService {
@@ -44,9 +45,16 @@ export class InterviewsService {
       throw new NotFoundException('Job not found');
     }
 
-    if (nextInterviewStatus[job.status] !== dto.round) {
+    const currentStatusIndex = interviewStatusOrder.indexOf(
+      job.status as (typeof interviewStatusOrder)[number],
+    );
+    const targetStatusIndex = interviewStatusOrder.indexOf(
+      dto.round as (typeof interviewStatusOrder)[number],
+    );
+
+    if (currentStatusIndex === -1 || targetStatusIndex <= currentStatusIndex) {
       throw new BadRequestException(
-        'Interview round must follow the current job status',
+        'Interview round must be later than the current job status',
       );
     }
 

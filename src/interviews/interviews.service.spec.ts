@@ -94,15 +94,46 @@ describe('InterviewsService', () => {
     });
   });
 
-  it('should reject a skipped interview round', async () => {
+  it('should allow skipping forward to a later interview round', async () => {
     prismaMock.job.findFirst.mockResolvedValue({
       id: 'job-1',
       status: JobStatus.DOCUMENT_SCREENING,
     });
+    const interview = {
+      id: 'interview-1',
+      jobId: 'job-1',
+      round: JobStatus.FINAL_INTERVIEW,
+    };
+    prismaMock.interview.create.mockReturnValue(interview);
+    prismaMock.job.update.mockReturnValue({
+      id: 'job-1',
+      status: JobStatus.FINAL_INTERVIEW,
+    });
+    prismaMock.$transaction.mockResolvedValue([interview, {}]);
 
     await expect(
       service.createForJob('user-1', 'job-1', {
-        round: JobStatus.SECOND_INTERVIEW,
+        round: JobStatus.FINAL_INTERVIEW,
+        mode: InterviewMode.OFFLINE,
+        scheduledAt: '2026-09-01T10:00:00+09:00',
+        location: 'Tokyo',
+      }),
+    ).resolves.toEqual(interview);
+    expect(prismaMock.job.update).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: { status: JobStatus.FINAL_INTERVIEW },
+    });
+  });
+
+  it('should reject moving back to an earlier interview round', async () => {
+    prismaMock.job.findFirst.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.SECOND_INTERVIEW,
+    });
+
+    await expect(
+      service.createForJob('user-1', 'job-1', {
+        round: JobStatus.FIRST_INTERVIEW,
         mode: InterviewMode.OFFLINE,
         scheduledAt: '2026-09-01T10:00:00+09:00',
         location: 'Tokyo',

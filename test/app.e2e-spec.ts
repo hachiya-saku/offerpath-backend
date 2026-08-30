@@ -269,7 +269,7 @@ describe('AppController (e2e)', () => {
       const interviewResponse = await request(app.getHttpServer())
         .post(`/api/v1/jobs/${jobId}/interviews`)
         .send({
-          round: 'FIRST_INTERVIEW',
+          round: 'FINAL_INTERVIEW',
           mode: 'OFFLINE',
           scheduledAt: '2026-09-15T14:00:00+09:00',
           location: '東京都千代田区丸の内1丁目',
@@ -284,12 +284,12 @@ describe('AppController (e2e)', () => {
 
       expect(interview).toMatchObject({
         jobId,
-        round: 'FIRST_INTERVIEW',
+        round: 'FINAL_INTERVIEW',
         mode: 'OFFLINE',
       });
 
       const updatedJob = await prisma.job.findUnique({ where: { id: jobId } });
-      expect(updatedJob?.status).toBe('FIRST_INTERVIEW');
+      expect(updatedJob?.status).toBe('FINAL_INTERVIEW');
 
       const listResponse = await request(app.getHttpServer())
         .get('/api/v1/interviews')

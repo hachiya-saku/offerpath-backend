@@ -19,6 +19,11 @@ describe('JobsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    jobStatusHistory: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -238,8 +243,8 @@ describe('JobsService', () => {
   it('should update job fields without changing the company', async () => {
     const userId = 'user-1';
     const jobId = 'job-1';
-    const dto = { status: JobStatus.APPLIED };
-    const updatedJob = { id: jobId, status: JobStatus.APPLIED };
+    const dto = { positionName: 'Senior Frontend Engineer' };
+    const updatedJob = { id: jobId, ...dto };
 
     prismaMock.job.findFirst.mockResolvedValue({ id: jobId });
     prismaMock.job.update.mockResolvedValue(updatedJob);
@@ -252,7 +257,7 @@ describe('JobsService', () => {
     expect(prismaMock.job.update).toHaveBeenCalledWith({
       where: { id: jobId },
       data: {
-        status: JobStatus.APPLIED,
+        positionName: 'Senior Frontend Engineer',
         companyId: undefined,
       },
     });
@@ -382,5 +387,45 @@ describe('JobsService', () => {
     );
 
     expect(prismaMock.job.delete).not.toHaveBeenCalled();
+  });
+
+  it('should correct a job status and record the history', async () => {
+    prismaMock.job.findFirst.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.FINAL_INTERVIEW,
+    });
+    const updatedJob = { id: 'job-1', status: JobStatus.FIRST_INTERVIEW };
+    prismaMock.job.update.mockReturnValue(updatedJob);
+    prismaMock.jobStatusHistory.create.mockReturnValue({ id: 'history-1' });
+    prismaMock.$transaction.mockResolvedValue([updatedJob, {}]);
+
+    await expect(
+      service.correctStatusForUser('user-1', 'job-1', {
+        status: JobStatus.FIRST_INTERVIEW,
+        reason: 'Wrong selection',
+      }),
+    ).resolves.toEqual(updatedJob);
+    expect(prismaMock.jobStatusHistory.create).toHaveBeenCalledWith({
+      data: {
+        jobId: 'job-1',
+        fromStatus: JobStatus.FINAL_INTERVIEW,
+        toStatus: JobStatus.FIRST_INTERVIEW,
+        changeType: 'CORRECTION',
+        reason: 'Wrong selection',
+      },
+    });
+  });
+
+  it('should list status history for a job belonging to the user', async () => {
+    prismaMock.job.findFirst.mockResolvedValue({ id: 'job-1' });
+    prismaMock.jobStatusHistory.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.findStatusHistoryForUser('user-1', 'job-1'),
+    ).resolves.toEqual([]);
+    expect(prismaMock.jobStatusHistory.findMany).toHaveBeenCalledWith({
+      where: { jobId: 'job-1' },
+      orderBy: { createdAt: 'desc' },
+    });
   });
 });

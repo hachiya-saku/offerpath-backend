@@ -9,6 +9,7 @@ describe('InterviewsController', () => {
   const serviceMock = {
     findAllForUser: jest.fn(),
     createForJob: jest.fn(),
+    undoForJob: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -41,6 +42,17 @@ describe('InterviewsController', () => {
       DEMO_USER_ID,
       'job-1',
       dto,
+    );
+  });
+
+  it('should undo an interview for a job', async () => {
+    serviceMock.undoForJob.mockResolvedValue({ id: 'job-1' });
+
+    await controller.undo('job-1', 'interview-1');
+    expect(serviceMock.undoForJob).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      'job-1',
+      'interview-1',
     );
   });
 });

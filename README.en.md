@@ -32,6 +32,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 - Complete Job CRUD APIs
 - Email registration, password login, and access token issuance
 - Interview scheduling, listing, and transactional job status updates
+- Job status corrections, change history, and undo for mistaken interview progression
 - Unit and E2E tests with Jest and Supertest
 
 ## API
@@ -52,6 +53,9 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | `DELETE` | `/api/v1/jobs/:id` | Delete a job |
 | `POST` | `/api/v1/jobs/:id/interviews` | Schedule the next interview and advance status |
 | `GET` | `/api/v1/interviews` | List interview schedules |
+| `PATCH` | `/api/v1/jobs/:id/status` | Correct a job status and record the reason |
+| `GET` | `/api/v1/jobs/:id/status-history` | List job status history |
+| `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | Undo the latest interview progression |
 
 Authentication guards are not connected to the Company and Job APIs yet, so those endpoints still use the seeded demo user.
 

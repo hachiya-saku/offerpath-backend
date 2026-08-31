@@ -11,6 +11,8 @@ describe('JobsController', () => {
     findAllByUserId: jest.fn(),
     findOneByUserIdAndJobId: jest.fn(),
     updateJobForUser: jest.fn(),
+    correctStatusForUser: jest.fn(),
+    findStatusHistoryForUser: jest.fn(),
     deleteJobForUser: jest.fn(),
   };
 
@@ -96,5 +98,24 @@ describe('JobsController', () => {
       jobId,
     );
     expect(result).toEqual(deletedJob);
+  });
+
+  it('should correct a job status for the demo user', async () => {
+    const dto = { status: 'FIRST_INTERVIEW' as const, reason: 'Mistake' };
+    await controller.correctStatus('job-1', dto);
+    expect(jobsServiceMock.correctStatusForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      'job-1',
+      dto,
+    );
+  });
+
+  it('should list a job status history for the demo user', async () => {
+    jobsServiceMock.findStatusHistoryForUser.mockResolvedValue([]);
+    await expect(controller.findStatusHistory('job-1')).resolves.toEqual([]);
+    expect(jobsServiceMock.findStatusHistoryForUser).toHaveBeenCalledWith(
+      DEMO_USER_ID,
+      'job-1',
+    );
   });
 });

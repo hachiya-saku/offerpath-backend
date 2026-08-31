@@ -7,6 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { normalizeCompanyName } from '../companies/company-name';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { CorrectJobStatusDto } from './dto/correct-job-status.dto';
+import { JobStatusChangeType } from '../../generated/prisma/enums';
 
 @Injectable()
 export class JobsService {
@@ -182,6 +184,59 @@ export class JobsService {
 
     return this.prisma.job.delete({
       where: { id: jobId },
+    });
+  }
+
+  async correctStatusForUser(
+    userId: string,
+    jobId: string,
+    dto: CorrectJobStatusDto,
+  ) {
+    const job = await this.prisma.job.findFirst({
+      where: { id: jobId, company: { userId } },
+      select: { id: true, status: true },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.status === dto.status) {
+      throw new BadRequestException('Job already has the selected status');
+    }
+
+    const [updatedJob] = await this.prisma.$transaction([
+      this.prisma.job.update({
+        where: { id: jobId },
+        data: { status: dto.status },
+      }),
+      this.prisma.jobStatusHistory.create({
+        data: {
+          jobId,
+          fromStatus: job.status,
+          toStatus: dto.status,
+          changeType: JobStatusChangeType.CORRECTION,
+          reason: dto.reason,
+        },
+      }),
+    ]);
+
+    return updatedJob;
+  }
+
+  async findStatusHistoryForUser(userId: string, jobId: string) {
+    const job = await this.prisma.job.findFirst({
+      where: { id: jobId, company: { userId } },
+      select: { id: true },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    return this.prisma.jobStatusHistory.findMany({
+      where: { jobId },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

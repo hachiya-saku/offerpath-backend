@@ -206,14 +206,13 @@ describe('AppController (e2e)', () => {
         .patch(`/api/v1/jobs/${jobId}`)
         .send({
           positionName: 'Senior Frontend Engineer',
-          status: 'APPLIED',
         })
         .expect(200);
 
       expect(updateResponse.body).toMatchObject({
         id: jobId,
         positionName: 'Senior Frontend Engineer',
-        status: 'APPLIED',
+        status: 'WISHLIST',
       });
 
       const deleteResponse = await request(app.getHttpServer())
@@ -296,6 +295,44 @@ describe('AppController (e2e)', () => {
         .expect(200);
       const interviews = listResponse.body as Array<{ id: string }>;
       expect(interviews.some((item) => item.id === interview.id)).toBe(true);
+
+      const undoResponse = await request(app.getHttpServer())
+        .delete(`/api/v1/jobs/${jobId}/interviews/${interview.id}/undo`)
+        .expect(200);
+      expect(undoResponse.body).toMatchObject({
+        id: jobId,
+        status: 'DOCUMENT_SCREENING',
+      });
+
+      const correctionResponse = await request(app.getHttpServer())
+        .patch(`/api/v1/jobs/${jobId}/status`)
+        .send({
+          status: 'FIRST_INTERVIEW',
+          reason: 'E2E status correction',
+        })
+        .expect(200);
+      expect(correctionResponse.body).toMatchObject({
+        id: jobId,
+        status: 'FIRST_INTERVIEW',
+      });
+
+      const historyResponse = await request(app.getHttpServer())
+        .get(`/api/v1/jobs/${jobId}/status-history`)
+        .expect(200);
+      const history = historyResponse.body as Array<{
+        changeType: string;
+        reason?: string;
+      }>;
+      expect(history).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ changeType: 'ADVANCE' }),
+          expect.objectContaining({ changeType: 'UNDO' }),
+          expect.objectContaining({
+            changeType: 'CORRECTION',
+            reason: 'E2E status correction',
+          }),
+        ]),
+      );
     } finally {
       if (jobId) await prisma.job.deleteMany({ where: { id: jobId } });
       if (companyId) {

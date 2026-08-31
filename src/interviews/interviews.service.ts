@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus } from '../../generated/prisma/enums';
+import { JobStatus, JobStatusChangeType } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 
@@ -63,6 +63,7 @@ export class InterviewsService {
         data: {
           jobId,
           round: dto.round,
+          previousJobStatus: job.status,
           mode: dto.mode,
           scheduledAt: new Date(dto.scheduledAt),
           platform: dto.mode === 'ONLINE' ? dto.platform : null,
@@ -86,8 +87,66 @@ export class InterviewsService {
         where: { id: jobId },
         data: { status: dto.round },
       }),
+      this.prisma.jobStatusHistory.create({
+        data: {
+          jobId,
+          fromStatus: job.status,
+          toStatus: dto.round,
+          changeType: JobStatusChangeType.ADVANCE,
+        },
+      }),
     ]);
 
     return interview;
+  }
+
+  async undoForJob(userId: string, jobId: string, interviewId: string) {
+    const interview = await this.prisma.interview.findFirst({
+      where: {
+        id: interviewId,
+        jobId,
+        job: { company: { userId } },
+      },
+      include: { job: { select: { status: true } } },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    const latestInterview = await this.prisma.interview.findFirst({
+      where: { jobId },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (
+      latestInterview?.id !== interviewId ||
+      !interview.previousJobStatus ||
+      interview.job.status !== interview.round
+    ) {
+      throw new BadRequestException(
+        'Only the latest interview status change can be undone',
+      );
+    }
+
+    const [, job] = await this.prisma.$transaction([
+      this.prisma.interview.delete({ where: { id: interviewId } }),
+      this.prisma.job.update({
+        where: { id: jobId },
+        data: { status: interview.previousJobStatus },
+      }),
+      this.prisma.jobStatusHistory.create({
+        data: {
+          jobId,
+          fromStatus: interview.round,
+          toStatus: interview.previousJobStatus,
+          changeType: JobStatusChangeType.UNDO,
+          reason: 'Interview scheduling undone',
+        },
+      }),
+    ]);
+
+    return job;
   }
 }

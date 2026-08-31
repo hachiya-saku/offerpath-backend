@@ -20,7 +20,7 @@ model User {
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
-  companies Company[]
+  companies          Company[]
   passwordCredential PasswordCredential?
 }
 
@@ -66,8 +66,9 @@ model Job {
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  interviews Interview[]
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  interviews      Interview[]
+  statusHistories JobStatusHistory[]
 
   @@index([companyId])
   @@index([status])
@@ -75,19 +76,20 @@ model Job {
 }
 
 model Interview {
-  id              String        @id @default(uuid()) @db.Uuid
-  jobId           String        @db.Uuid
-  round           JobStatus
-  mode            InterviewMode
-  scheduledAt     DateTime      @db.Timestamptz(3)
-  platform        String?
-  meetingUrl      String?
-  meetingId       String?
-  meetingPassword String?
-  location        String?
-  notes           String?
-  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  id                String        @id @default(uuid()) @db.Uuid
+  jobId             String        @db.Uuid
+  round             JobStatus
+  previousJobStatus JobStatus?
+  mode              InterviewMode
+  scheduledAt       DateTime      @db.Timestamptz(3)
+  platform          String?
+  meetingUrl        String?
+  meetingId         String?
+  meetingPassword   String?
+  location          String?
+  notes             String?
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(3)
 
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -95,9 +97,29 @@ model Interview {
   @@index([scheduledAt])
 }
 
+model JobStatusHistory {
+  id         String              @id @default(uuid()) @db.Uuid
+  jobId      String              @db.Uuid
+  fromStatus JobStatus
+  toStatus   JobStatus
+  changeType JobStatusChangeType
+  reason     String?
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
 enum InterviewMode {
   ONLINE
   OFFLINE
+}
+
+enum JobStatusChangeType {
+  ADVANCE
+  CORRECTION
+  UNDO
 }
 
 enum JobStatus {

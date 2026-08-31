@@ -32,6 +32,7 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 - Job 完整 CRUD 接口
 - 邮箱注册、密码登录与 Access Token 签发
 - 面试安排创建、列表查询与岗位状态联动更新
+- 岗位状态修正、变更历史与错误面试推进撤销
 - Jest 单元测试与 Supertest E2E 测试
 
 ## API
@@ -52,6 +53,9 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 | `DELETE` | `/api/v1/jobs/:id` | 删除岗位 |
 | `POST` | `/api/v1/jobs/:id/interviews` | 安排下一轮面试并更新岗位状态 |
 | `GET` | `/api/v1/interviews` | 面试安排列表 |
+| `PATCH` | `/api/v1/jobs/:id/status` | 修正岗位状态并记录原因 |
+| `GET` | `/api/v1/jobs/:id/status-history` | 查询岗位状态历史 |
+| `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | 撤销最近一次面试推进 |
 
 Company / Job 接口尚未接入认证守卫，因此当前仍使用种子数据中的演示用户。
 

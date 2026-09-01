@@ -1,11 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
-import { DEMO_USER_ID } from '../common/constants/demo-user';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
 describe('JobsController', () => {
   let controller: JobsController;
+  const user: JwtPayload = {
+    sub: 'authenticated-user',
+    email: 'user@example.com',
+  };
 
   const jobsServiceMock = {
     createForUser: jest.fn(),
@@ -41,17 +45,13 @@ describe('JobsController', () => {
       platform: 'LinkedIn',
     };
 
-    await controller.create(dto);
+    await controller.create(dto, user);
 
-    expect(jobsServiceMock.createForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
-      dto,
-    );
+    expect(jobsServiceMock.createForUser).toHaveBeenCalledWith(user.sub, dto);
   });
 
   it('should call findAllByUserId with the correct parameters', async () => {
     jobsServiceMock.findAllByUserId.mockResolvedValue([]);
-    const user = { sub: 'authenticated-user', email: 'user@example.com' };
     const result = await controller.findAll(user);
 
     expect(jobsServiceMock.findAllByUserId).toHaveBeenCalledWith(user.sub);
@@ -63,63 +63,65 @@ describe('JobsController', () => {
     const jobId = 'job-1';
     jobsServiceMock.findOneByUserIdAndJobId.mockResolvedValue({ id: jobId });
 
-    const result = await controller.findOne(jobId);
+    const result = await controller.findOne(jobId, user);
 
     expect(jobsServiceMock.findOneByUserIdAndJobId).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       jobId,
     );
 
     expect(result).toEqual({ id: jobId });
   });
 
-  it('should update a job for the demo user', async () => {
+  it('should update a job for the current user', async () => {
     const jobId = 'job-1';
     const dto = { positionName: 'Senior Frontend Engineer' };
     const updatedJob = { id: jobId, ...dto };
 
     jobsServiceMock.updateJobForUser.mockResolvedValue(updatedJob);
 
-    const result = await controller.update(jobId, dto);
+    const result = await controller.update(jobId, dto, user);
 
     expect(jobsServiceMock.updateJobForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       jobId,
       dto,
     );
     expect(result).toEqual(updatedJob);
   });
 
-  it('should delete a job for the demo user', async () => {
+  it('should delete a job for the current user', async () => {
     const jobId = 'job-1';
     const deletedJob = { id: jobId };
 
     jobsServiceMock.deleteJobForUser.mockResolvedValue(deletedJob);
 
-    const result = await controller.delete(jobId);
+    const result = await controller.delete(jobId, user);
 
     expect(jobsServiceMock.deleteJobForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       jobId,
     );
     expect(result).toEqual(deletedJob);
   });
 
-  it('should correct a job status for the demo user', async () => {
+  it('should correct a job status for the current user', async () => {
     const dto = { status: 'FIRST_INTERVIEW' as const, reason: 'Mistake' };
-    await controller.correctStatus('job-1', dto);
+    await controller.correctStatus('job-1', dto, user);
     expect(jobsServiceMock.correctStatusForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       'job-1',
       dto,
     );
   });
 
-  it('should list a job status history for the demo user', async () => {
+  it('should list a job status history for the current user', async () => {
     jobsServiceMock.findStatusHistoryForUser.mockResolvedValue([]);
-    await expect(controller.findStatusHistory('job-1')).resolves.toEqual([]);
+    await expect(controller.findStatusHistory('job-1', user)).resolves.toEqual(
+      [],
+    );
     expect(jobsServiceMock.findStatusHistoryForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       'job-1',
     );
   });

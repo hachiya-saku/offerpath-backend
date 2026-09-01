@@ -1,27 +1,43 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { DEMO_USER_ID } from '../common/constants/demo-user';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { InterviewsService } from './interviews.service';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
 @Controller()
+@UseGuards(AccessTokenGuard)
 export class InterviewsController {
   constructor(private readonly interviewsService: InterviewsService) {}
 
   @Get('interviews')
-  findAll() {
-    return this.interviewsService.findAllForUser(DEMO_USER_ID);
+  findAll(@CurrentUser() user: JwtPayload) {
+    return this.interviewsService.findAllForUser(user.sub);
   }
 
   @Post('jobs/:jobId/interviews')
-  create(@Param('jobId') jobId: string, @Body() dto: CreateInterviewDto) {
-    return this.interviewsService.createForJob(DEMO_USER_ID, jobId, dto);
+  create(
+    @Param('jobId') jobId: string,
+    @Body() dto: CreateInterviewDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.interviewsService.createForJob(user.sub, jobId, dto);
   }
 
   @Delete('jobs/:jobId/interviews/:interviewId/undo')
   undo(
     @Param('jobId') jobId: string,
     @Param('interviewId') interviewId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.interviewsService.undoForJob(DEMO_USER_ID, jobId, interviewId);
+    return this.interviewsService.undoForJob(user.sub, jobId, interviewId);
   }
 }

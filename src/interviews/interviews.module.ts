@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { InterviewsController } from './interviews.controller';
 import { InterviewsService } from './interviews.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [InterviewsController],
   providers: [InterviewsService],
 })

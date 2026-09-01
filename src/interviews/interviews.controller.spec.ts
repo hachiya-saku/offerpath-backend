@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InterviewMode, JobStatus } from '../../generated/prisma/enums';
-import { DEMO_USER_ID } from '../common/constants/demo-user';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 import { InterviewsController } from './interviews.controller';
 import { InterviewsService } from './interviews.service';
 
 describe('InterviewsController', () => {
   let controller: InterviewsController;
+  const user: JwtPayload = {
+    sub: 'authenticated-user',
+    email: 'user@example.com',
+  };
   const serviceMock = {
     findAllForUser: jest.fn(),
     createForJob: jest.fn(),
@@ -17,15 +22,18 @@ describe('InterviewsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InterviewsController],
       providers: [{ provide: InterviewsService, useValue: serviceMock }],
-    }).compile();
+    })
+      .overrideGuard(AccessTokenGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = module.get(InterviewsController);
   });
 
-  it('should list interviews for the demo user', async () => {
+  it('should list interviews for the current user', async () => {
     serviceMock.findAllForUser.mockResolvedValue([]);
 
-    await expect(controller.findAll()).resolves.toEqual([]);
-    expect(serviceMock.findAllForUser).toHaveBeenCalledWith(DEMO_USER_ID);
+    await expect(controller.findAll(user)).resolves.toEqual([]);
+    expect(serviceMock.findAllForUser).toHaveBeenCalledWith(user.sub);
   });
 
   it('should create an interview for a job', async () => {
@@ -37,9 +45,9 @@ describe('InterviewsController', () => {
     };
     serviceMock.createForJob.mockResolvedValue({ id: 'interview-1' });
 
-    await controller.create('job-1', dto);
+    await controller.create('job-1', dto, user);
     expect(serviceMock.createForJob).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       'job-1',
       dto,
     );
@@ -48,9 +56,9 @@ describe('InterviewsController', () => {
   it('should undo an interview for a job', async () => {
     serviceMock.undoForJob.mockResolvedValue({ id: 'job-1' });
 
-    await controller.undo('job-1', 'interview-1');
+    await controller.undo('job-1', 'interview-1', user);
     expect(serviceMock.undoForJob).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       'job-1',
       'interview-1',
     );

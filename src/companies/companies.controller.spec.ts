@@ -1,10 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 import { CompaniesController } from './companies.controller';
 import { CompaniesService } from './companies.service';
-import { DEMO_USER_ID } from '../common/constants/demo-user';
 
 describe('CompaniesController', () => {
   let controller: CompaniesController;
+  const user: JwtPayload = {
+    sub: 'authenticated-user',
+    email: 'user@example.com',
+  };
 
   const companiesServiceMock = {
     findAllByUserId: jest.fn().mockResolvedValue([]),
@@ -23,7 +28,10 @@ describe('CompaniesController', () => {
           useValue: companiesServiceMock,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(AccessTokenGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<CompaniesController>(CompaniesController);
   });
@@ -32,32 +40,30 @@ describe('CompaniesController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should call findAllByUserId with the demo user ID', async () => {
-    const result = await controller.findAll();
+  it('should call findAllByUserId with the current user ID', async () => {
+    const result = await controller.findAll(user);
 
-    expect(companiesServiceMock.findAllByUserId).toHaveBeenCalledWith(
-      DEMO_USER_ID,
-    );
+    expect(companiesServiceMock.findAllByUserId).toHaveBeenCalledWith(user.sub);
     expect(result).toEqual([]);
   });
 
-  it('should call createForUser with the demo user ID and DTO', async () => {
+  it('should call createForUser with the current user ID and DTO', async () => {
     const dto = {
       name: 'OfferPath Inc.',
       website: 'https://example.com',
       notes: 'Demo company',
     };
 
-    const result = await controller.create(dto);
+    const result = await controller.create(dto, user);
 
     expect(companiesServiceMock.createForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       dto,
     );
     expect(result).toEqual({ id: 'company-1' });
   });
 
-  it('should call updateForUser with the demo user ID, company ID, and DTO', async () => {
+  it('should call updateForUser with the current user ID, company ID, and DTO', async () => {
     const companyId = 'company-1';
     const dto = {
       name: 'Updated Company Name',
@@ -65,23 +71,23 @@ describe('CompaniesController', () => {
       notes: 'Updated notes',
     };
 
-    const result = await controller.update(companyId, dto);
+    const result = await controller.update(companyId, dto, user);
 
     expect(companiesServiceMock.updateForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       companyId,
       dto,
     );
     expect(result).toEqual({ id: 'company-1' });
   });
 
-  it('should call deleteForUser with the demo user ID and company ID', async () => {
+  it('should call deleteForUser with the current user ID and company ID', async () => {
     const companyId = 'company-1';
 
-    const result = await controller.delete(companyId);
+    const result = await controller.delete(companyId, user);
 
     expect(companiesServiceMock.deleteForUser).toHaveBeenCalledWith(
-      DEMO_USER_ID,
+      user.sub,
       companyId,
     );
     expect(result).toEqual({ id: 'company-1' });

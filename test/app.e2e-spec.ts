@@ -62,6 +62,7 @@ describe('AppController (e2e)', () => {
   it('/api/v1/companies (POST) rejects invalid data', () => {
     return request(app.getHttpServer())
       .post('/api/v1/companies')
+      .set('Authorization', `Bearer ${accessToken}`)
       .send({
         name: '',
         website: 'not-a-url',
@@ -73,6 +74,7 @@ describe('AppController (e2e)', () => {
   it('/api/v1/companies (POST, GET) creates and lists a company', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/api/v1/companies')
+      .set('Authorization', `Bearer ${accessToken}`)
       .send({
         name: 'E2E Test Company',
         website: 'https://example.com',
@@ -92,6 +94,7 @@ describe('AppController (e2e)', () => {
 
       const listResponse = await request(app.getHttpServer())
         .get('/api/v1/companies')
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       expect(listResponse.body).toEqual(
@@ -114,6 +117,7 @@ describe('AppController (e2e)', () => {
   it('/api/v1/companies/:id (PATCH, DELETE) updates and deletes a company', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/api/v1/companies')
+      .set('Authorization', `Bearer ${accessToken}`)
       .send({
         name: 'E2E Update Company',
       })
@@ -124,6 +128,7 @@ describe('AppController (e2e)', () => {
     try {
       const updateResponse = await request(app.getHttpServer())
         .patch(`/api/v1/companies/${companyId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: 'E2E Updated Company',
           notes: 'Updated by E2E test',
@@ -138,6 +143,7 @@ describe('AppController (e2e)', () => {
 
       const deleteResponse = await request(app.getHttpServer())
         .delete(`/api/v1/companies/${companyId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       expect(deleteResponse.body).toMatchObject({
@@ -162,6 +168,7 @@ describe('AppController (e2e)', () => {
     try {
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/jobs')
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           companyName,
           positionName: 'Frontend Engineer',
@@ -203,6 +210,7 @@ describe('AppController (e2e)', () => {
 
       const detailResponse = await request(app.getHttpServer())
         .get(`/api/v1/jobs/${jobId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       const jobDetail = detailResponse.body as {
         id: string;
@@ -214,6 +222,7 @@ describe('AppController (e2e)', () => {
 
       const updateResponse = await request(app.getHttpServer())
         .patch(`/api/v1/jobs/${jobId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           positionName: 'Senior Frontend Engineer',
         })
@@ -227,6 +236,7 @@ describe('AppController (e2e)', () => {
 
       const deleteResponse = await request(app.getHttpServer())
         .delete(`/api/v1/jobs/${jobId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       const deletedJob = deleteResponse.body as {
         id: string;
@@ -241,6 +251,7 @@ describe('AppController (e2e)', () => {
 
       await request(app.getHttpServer())
         .get(`/api/v1/jobs/${deletedJob.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     } finally {
       if (jobId) {
@@ -261,6 +272,7 @@ describe('AppController (e2e)', () => {
     try {
       const jobResponse = await request(app.getHttpServer())
         .post('/api/v1/jobs')
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           companyName: `E2E Interview Company ${Date.now()}`,
           positionName: 'Frontend Engineer',
@@ -277,6 +289,7 @@ describe('AppController (e2e)', () => {
 
       const interviewResponse = await request(app.getHttpServer())
         .post(`/api/v1/jobs/${jobId}/interviews`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           round: 'FINAL_INTERVIEW',
           mode: 'OFFLINE',
@@ -302,12 +315,14 @@ describe('AppController (e2e)', () => {
 
       const listResponse = await request(app.getHttpServer())
         .get('/api/v1/interviews')
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       const interviews = listResponse.body as Array<{ id: string }>;
       expect(interviews.some((item) => item.id === interview.id)).toBe(true);
 
       const undoResponse = await request(app.getHttpServer())
         .delete(`/api/v1/jobs/${jobId}/interviews/${interview.id}/undo`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(undoResponse.body).toMatchObject({
         id: jobId,
@@ -316,6 +331,7 @@ describe('AppController (e2e)', () => {
 
       const correctionResponse = await request(app.getHttpServer())
         .patch(`/api/v1/jobs/${jobId}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .send({
           status: 'FIRST_INTERVIEW',
           reason: 'E2E status correction',
@@ -328,6 +344,7 @@ describe('AppController (e2e)', () => {
 
       const historyResponse = await request(app.getHttpServer())
         .get(`/api/v1/jobs/${jobId}/status-history`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       const history = historyResponse.body as Array<{
         changeType: string;

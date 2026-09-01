@@ -1,5 +1,7 @@
 # OfferPath Backend
 
+[![CI](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml)
+
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath Backend is the REST API for the OfferPath job application management platform. It will manage jobs, application status, skill profiles, match scores, and authentication.

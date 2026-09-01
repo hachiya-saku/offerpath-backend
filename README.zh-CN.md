@@ -1,5 +1,7 @@
 # OfferPath Backend
 
+[![CI](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml)
+
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，用于管理岗位信息、投递状态、个人技术栈、匹配度和用户认证等数据。

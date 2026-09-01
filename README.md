@@ -1,5 +1,7 @@
 # OfferPath Backend
 
+[![CI](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/hachiya-saku/offerpath-backend/actions/workflows/ci.yml)
+
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath Backend は、求職管理プラットフォーム OfferPath の REST API サーバーです。求人情報、応募ステータス、スキルプロフィール、マッチ度、認証などのデータを管理します。

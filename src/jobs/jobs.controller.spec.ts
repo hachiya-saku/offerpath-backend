@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
 import { DEMO_USER_ID } from '../common/constants/demo-user';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
 
 describe('JobsController', () => {
   let controller: JobsController;
@@ -21,7 +22,10 @@ describe('JobsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [JobsController],
       providers: [{ provide: JobsService, useValue: jobsServiceMock }],
-    }).compile();
+    })
+      .overrideGuard(AccessTokenGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<JobsController>(JobsController);
   });
@@ -47,9 +51,10 @@ describe('JobsController', () => {
 
   it('should call findAllByUserId with the correct parameters', async () => {
     jobsServiceMock.findAllByUserId.mockResolvedValue([]);
-    const result = await controller.findAll();
+    const user = { sub: 'authenticated-user', email: 'user@example.com' };
+    const result = await controller.findAll(user);
 
-    expect(jobsServiceMock.findAllByUserId).toHaveBeenCalledWith(DEMO_USER_ID);
+    expect(jobsServiceMock.findAllByUserId).toHaveBeenCalledWith(user.sub);
 
     expect(result).toEqual([]);
   });

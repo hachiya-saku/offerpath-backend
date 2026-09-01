@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
@@ -12,6 +13,7 @@ import {
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
+  let accessToken: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,6 +32,7 @@ describe('AppController (e2e)', () => {
     app.setGlobalPrefix('api/v1');
     await app.init();
     prisma = app.get(PrismaService);
+    const jwtService = app.get(JwtService);
     await prisma.user.upsert({
       where: {
         email: DEMO_USER_EMAIL,
@@ -42,6 +45,10 @@ describe('AppController (e2e)', () => {
         email: DEMO_USER_EMAIL,
         displayName: 'OfferPath Demo User',
       },
+    });
+    accessToken = await jwtService.signAsync({
+      sub: DEMO_USER_ID,
+      email: DEMO_USER_EMAIL,
     });
   });
 
@@ -177,8 +184,11 @@ describe('AppController (e2e)', () => {
         status: 'WISHLIST',
       });
 
+      await request(app.getHttpServer()).get('/api/v1/jobs').expect(401);
+
       const listResponse = await request(app.getHttpServer())
         .get('/api/v1/jobs')
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       const listedJobs = listResponse.body as Array<{
         id: string;

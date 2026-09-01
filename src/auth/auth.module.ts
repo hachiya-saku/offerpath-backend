@@ -4,10 +4,12 @@ import { AuthService } from './auth.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { AccessTokenGuard } from './guards/access-token.guard';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, AccessTokenGuard],
+  exports: [AccessTokenGuard, JwtModule],
   imports: [
     PrismaModule,
     JwtModule.registerAsync({

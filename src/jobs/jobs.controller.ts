@@ -6,12 +6,16 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { DEMO_USER_ID } from '../common/constants/demo-user';
 import { CreateJobDto } from './dto/create-job.dto';
 import { CorrectJobStatusDto } from './dto/correct-job-status.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { JobsService } from './jobs.service';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/types/jwt-payload.type';
 
 @Controller('jobs')
 export class JobsController {
@@ -22,9 +26,10 @@ export class JobsController {
     return this.jobsService.createForUser(DEMO_USER_ID, dto);
   }
 
+  @UseGuards(AccessTokenGuard)
   @Get()
-  findAll() {
-    return this.jobsService.findAllByUserId(DEMO_USER_ID);
+  findAll(@CurrentUser() user: JwtPayload) {
+    return this.jobsService.findAllByUserId(user.sub);
   }
 
   @Get(':id')

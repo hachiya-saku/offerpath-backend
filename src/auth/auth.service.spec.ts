@@ -4,11 +4,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { compare, hash } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { createHash } from 'node:crypto';
 
 jest.mock('bcryptjs');
 
 const hashMock = jest.mocked(hash);
 const compareMock = jest.mocked(compare);
+const refreshHash = (token: string) =>
+  createHash('sha256').update(token).digest('hex');
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -18,16 +22,37 @@ describe('AuthService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
     },
+    passwordCredential: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
   const jwtServiceMock = {
     signAsync: jest.fn(),
+    verifyAsync: jest.fn(),
+  };
+  const configServiceMock = {
+    getOrThrow: jest.fn((key: string) => {
+      const config: Record<string, string> = {
+        JWT_ACCESS_SECRET: 'access-secret',
+        JWT_ACCESS_EXPIRES_IN: '15m',
+        JWT_REFRESH_SECRET: 'refresh-secret',
+        JWT_REFRESH_EXPIRES_IN: '7d',
+      };
+      return config[key];
+    }),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     hashMock.mockResolvedValue('hashed-password');
     compareMock.mockResolvedValue(true);
-    jwtServiceMock.signAsync.mockResolvedValue('access-token');
+    jwtServiceMock.signAsync.mockReset();
+    jwtServiceMock.verifyAsync.mockReset();
+    jwtServiceMock.signAsync
+      .mockResolvedValueOnce('access-token')
+      .mockResolvedValueOnce('refresh-token');
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -38,6 +63,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: jwtServiceMock,
+        },
+        {
+          provide: ConfigService,
+          useValue: configServiceMock,
         },
       ],
     }).compile();
@@ -106,7 +135,7 @@ describe('AuthService', () => {
     expect(prismaServiceMock.user.create).not.toHaveBeenCalled();
   });
 
-  it('should return an access token and safe user data for valid credentials', async () => {
+  it('should return a token pair, persist the refresh hash, and return safe user data', async () => {
     const user = {
       id: 'user-1',
       email: 'test@example.com',
@@ -125,12 +154,14 @@ describe('AuthService', () => {
       include: { passwordCredential: true },
     });
     expect(compareMock).toHaveBeenCalledWith('password123', 'hashed-password');
-    expect(jwtServiceMock.signAsync).toHaveBeenCalledWith({
-      sub: user.id,
-      email: user.email,
+    expect(jwtServiceMock.signAsync).toHaveBeenCalledTimes(2);
+    expect(prismaServiceMock.passwordCredential.update).toHaveBeenCalledWith({
+      where: { userId: user.id },
+      data: { refreshTokenHash: refreshHash('refresh-token') },
     });
     expect(result).toEqual({
       accessToken: 'access-token',
+      refreshToken: 'refresh-token',
       user: {
         id: user.id,
         email: user.email,
@@ -164,5 +195,77 @@ describe('AuthService', () => {
     ).rejects.toThrow(UnauthorizedException);
 
     expect(jwtServiceMock.signAsync).not.toHaveBeenCalled();
+  });
+
+  it('should rotate a valid refresh token', async () => {
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      displayName: 'Saku',
+    };
+    jwtServiceMock.verifyAsync.mockResolvedValue({
+      sub: user.id,
+      email: user.email,
+    });
+    prismaServiceMock.passwordCredential.findUnique.mockResolvedValue({
+      userId: user.id,
+      refreshTokenHash: refreshHash('old-refresh-token'),
+      user,
+    });
+
+    const result = await service.refresh({ refreshToken: 'old-refresh-token' });
+
+    expect(prismaServiceMock.passwordCredential.update).toHaveBeenCalledWith({
+      where: { userId: user.id },
+      data: { refreshTokenHash: refreshHash('refresh-token') },
+    });
+    expect(result).toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+  });
+
+  it('should reject an invalid refresh token signature', async () => {
+    jwtServiceMock.verifyAsync.mockRejectedValue(new Error('invalid token'));
+
+    await expect(
+      service.refresh({ refreshToken: 'invalid-refresh-token' }),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(
+      prismaServiceMock.passwordCredential.findUnique,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('should reject a refresh token that does not match the stored hash', async () => {
+    jwtServiceMock.verifyAsync.mockResolvedValue({
+      sub: 'user-1',
+      email: 'test@example.com',
+    });
+    prismaServiceMock.passwordCredential.findUnique.mockResolvedValue({
+      refreshTokenHash: 'stored-refresh-hash',
+      user: { id: 'user-1', email: 'test@example.com' },
+    });
+    await expect(
+      service.refresh({ refreshToken: 'old-refresh-token' }),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(prismaServiceMock.passwordCredential.update).not.toHaveBeenCalled();
+  });
+
+  it('should clear the refresh token hash on logout', async () => {
+    prismaServiceMock.passwordCredential.updateMany.mockResolvedValue({
+      count: 1,
+    });
+
+    await expect(service.logout('user-1')).resolves.toEqual({
+      message: 'Logged out successfully',
+    });
+    expect(
+      prismaServiceMock.passwordCredential.updateMany,
+    ).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      data: { refreshTokenHash: null },
+    });
   });
 });

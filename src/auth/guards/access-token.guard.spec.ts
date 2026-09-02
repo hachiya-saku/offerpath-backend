@@ -1,12 +1,16 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { AccessTokenGuard } from './access-token.guard';
 
 describe('AccessTokenGuard', () => {
   let guard: AccessTokenGuard;
   const jwtServiceMock = { verifyAsync: jest.fn() };
+  const configServiceMock = {
+    getOrThrow: jest.fn().mockReturnValue('access-secret'),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -14,6 +18,7 @@ describe('AccessTokenGuard', () => {
       providers: [
         AccessTokenGuard,
         { provide: JwtService, useValue: jwtServiceMock },
+        { provide: ConfigService, useValue: configServiceMock },
       ],
     }).compile();
     guard = module.get(AccessTokenGuard);
@@ -53,7 +58,9 @@ describe('AccessTokenGuard', () => {
     jwtServiceMock.verifyAsync.mockResolvedValue(payload);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith('valid-token');
+    expect(jwtServiceMock.verifyAsync).toHaveBeenCalledWith('valid-token', {
+      secret: 'access-secret',
+    });
     expect(request).toMatchObject({ user: payload });
   });
 });

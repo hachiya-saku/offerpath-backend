@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
@@ -33,6 +34,7 @@ describe('AppController (e2e)', () => {
     await app.init();
     prisma = app.get(PrismaService);
     const jwtService = app.get(JwtService);
+    const configService = app.get(ConfigService);
     await prisma.user.upsert({
       where: {
         email: DEMO_USER_EMAIL,
@@ -46,10 +48,15 @@ describe('AppController (e2e)', () => {
         displayName: 'OfferPath Demo User',
       },
     });
-    accessToken = await jwtService.signAsync({
-      sub: DEMO_USER_ID,
-      email: DEMO_USER_EMAIL,
-    });
+    accessToken = await jwtService.signAsync(
+      {
+        sub: DEMO_USER_ID,
+        email: DEMO_USER_EMAIL,
+      },
+      {
+        secret: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+      },
+    );
   });
 
   it('/api/v1/health (GET)', () => {
@@ -57,6 +64,65 @@ describe('AppController (e2e)', () => {
       .get('/api/v1/health')
       .expect(200)
       .expect({ status: 'ok', service: 'offerpath-backend' });
+  });
+
+  it('/api/v1/auth refreshes tokens, rejects the old token, and logs out', async () => {
+    const email = `auth-e2e-${Date.now()}@example.com`;
+    const password = 'password123';
+    let userId: string | undefined;
+
+    try {
+      const registerResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          email,
+          password,
+          displayName: 'Auth E2E User',
+        })
+        .expect(201);
+      userId = (registerResponse.body as { id: string }).id;
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email, password })
+        .expect(201);
+      const loginTokens = loginResponse.body as {
+        accessToken: string;
+        refreshToken: string;
+      };
+
+      const refreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: loginTokens.refreshToken })
+        .expect(201);
+      const refreshedTokens = refreshResponse.body as {
+        accessToken: string;
+        refreshToken: string;
+      };
+
+      expect(refreshedTokens.accessToken).not.toBe(loginTokens.accessToken);
+      expect(refreshedTokens.refreshToken).not.toBe(loginTokens.refreshToken);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: loginTokens.refreshToken })
+        .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${refreshedTokens.accessToken}`)
+        .expect(201)
+        .expect({ message: 'Logged out successfully' });
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: refreshedTokens.refreshToken })
+        .expect(401);
+    } finally {
+      if (userId) {
+        await prisma.user.deleteMany({ where: { id: userId } });
+      }
+    }
   });
 
   it('/api/v1/companies (POST) rejects invalid data', () => {

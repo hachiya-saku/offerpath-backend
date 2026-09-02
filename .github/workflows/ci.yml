@@ -35,6 +35,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/offerpath_test?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-at-least-32-characters
       JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters
+      JWT_REFRESH_EXPIRES_IN: 7d
 
     steps:
       - name: Check out repository

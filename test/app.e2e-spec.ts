@@ -125,6 +125,73 @@ describe('AppController (e2e)', () => {
     }
   });
 
+  it('/api/v1/users/me gets and updates only the current user profile', async () => {
+    const email = `profile-e2e-${Date.now()}@example.com`;
+    const password = 'password123';
+    let userId: string | undefined;
+
+    try {
+      const registerResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({ email, password, displayName: 'Profile E2E User' })
+        .expect(201);
+      userId = (registerResponse.body as { id: string }).id;
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email, password })
+        .expect(201);
+      const { accessToken: profileAccessToken } = loginResponse.body as {
+        accessToken: string;
+      };
+
+      await request(app.getHttpServer()).get('/api/v1/users/me').expect(401);
+
+      const profileResponse = await request(app.getHttpServer())
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${profileAccessToken}`)
+        .expect(200);
+      expect(profileResponse.body).toMatchObject({
+        id: userId,
+        email,
+        displayName: 'Profile E2E User',
+        bio: null,
+        location: null,
+        avatarUrl: null,
+      });
+      expect(profileResponse.body).not.toHaveProperty('passwordCredential');
+
+      const updateResponse = await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${profileAccessToken}`)
+        .send({
+          displayName: 'Updated Profile User',
+          bio: 'Frontend engineer',
+          location: 'Tokyo, Japan',
+          avatarUrl: 'https://example.com/avatar.png',
+        })
+        .expect(200);
+      expect(updateResponse.body).toMatchObject({
+        id: userId,
+        email,
+        displayName: 'Updated Profile User',
+        bio: 'Frontend engineer',
+        location: 'Tokyo, Japan',
+        avatarUrl: 'https://example.com/avatar.png',
+      });
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${profileAccessToken}`)
+        .send({ email: 'forbidden@example.com' })
+        .expect(400);
+    } finally {
+      if (userId) {
+        await prisma.user.deleteMany({ where: { id: userId } });
+      }
+    }
+  });
+
   it('/api/v1/companies (POST) rejects invalid data', () => {
     return request(app.getHttpServer())
       .post('/api/v1/companies')

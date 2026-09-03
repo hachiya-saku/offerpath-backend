@@ -22,6 +22,19 @@ Frontend repository: [offerpath-frontend](https://github.com/hachiya-saku/offerp
 
 Prisma migrations and seed scripts manage the PostgreSQL schema and local development data.
 
+## Demo data
+
+```bash
+npx prisma db seed
+```
+
+The seed rebuilds sample data owned by the demo user, including six companies, six jobs, three interviews, status history, user skills, and job skills. Other users are not modified.
+
+```text
+Email: demo@offerpath.local
+Password: offerpath2026
+```
+
 ## Current foundation
 
 - Standard NestJS project structure

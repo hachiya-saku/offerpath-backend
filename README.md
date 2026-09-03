@@ -22,6 +22,19 @@ OfferPath Backend は、求職管理プラットフォーム OfferPath の REST 
 
 Prisma のマイグレーションとシードを使用して、PostgreSQL のスキーマと開発用データを管理します。
 
+## デモデータ
+
+```bash
+npx prisma db seed
+```
+
+Seed はデモユーザーが所有するサンプルデータを再作成します。6 社、6 件の求人、3 件の面接、ステータス履歴、ユーザースキル、求人スキルが含まれ、他のユーザーデータは変更しません。
+
+```text
+メール: demo@offerpath.local
+パスワード: offerpath2026
+```
+
 ## 現在の状態
 
 - NestJS プロジェクトの初期構成

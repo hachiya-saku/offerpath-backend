@@ -86,7 +86,7 @@ describe('AppController (e2e)', () => {
       const firstLoginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email, password })
-        .expect(201);
+        .expect(200);
       const firstLoginTokens = firstLoginResponse.body as {
         accessToken: string;
         refreshToken: string;
@@ -95,7 +95,7 @@ describe('AppController (e2e)', () => {
       const secondLoginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email, password })
-        .expect(201);
+        .expect(200);
       const secondLoginTokens = secondLoginResponse.body as {
         accessToken: string;
         refreshToken: string;
@@ -106,7 +106,7 @@ describe('AppController (e2e)', () => {
       const firstRefreshResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: firstLoginTokens.refreshToken })
-        .expect(201);
+        .expect(200);
       const firstRefreshedTokens = firstRefreshResponse.body as {
         accessToken: string;
         refreshToken: string;
@@ -127,7 +127,7 @@ describe('AppController (e2e)', () => {
       const secondRefreshResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: secondLoginTokens.refreshToken })
-        .expect(201);
+        .expect(200);
       const secondRefreshedTokens = secondRefreshResponse.body as {
         accessToken: string;
         refreshToken: string;
@@ -136,7 +136,7 @@ describe('AppController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
         .set('Authorization', `Bearer ${firstRefreshedTokens.accessToken}`)
-        .expect(201)
+        .expect(200)
         .expect({ message: 'Logged out successfully' });
 
       await request(app.getHttpServer())
@@ -147,7 +147,7 @@ describe('AppController (e2e)', () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: secondRefreshedTokens.refreshToken })
-        .expect(201);
+        .expect(200);
 
       expect(await prisma.refreshSession.count({ where: { userId } })).toBe(1);
     } finally {
@@ -172,7 +172,7 @@ describe('AppController (e2e)', () => {
       const loginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email, password })
-        .expect(201);
+        .expect(200);
       const { accessToken: profileAccessToken } = loginResponse.body as {
         accessToken: string;
       };

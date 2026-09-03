@@ -26,6 +26,7 @@ model User {
   companies          Company[]
   passwordCredential PasswordCredential?
   refreshSessions    RefreshSession[]
+  skills             UserSkill[]
 }
 
 model PasswordCredential {
@@ -58,6 +59,10 @@ model Company {
   name           String
   normalizedName String
   website        String?
+  industry       String?
+  size           String?
+  location       String?
+  description    String?
   notes          String?
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @db.Timestamptz(3)
@@ -77,6 +82,7 @@ model Job {
   salaryMin      Int?
   salaryMax      Int?
   salaryCurrency String    @default("JPY")
+  matchScore     Int?
   url            String?
   status         JobStatus @default(WISHLIST)
   notes          String?
@@ -86,10 +92,51 @@ model Job {
   company         Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
   interviews      Interview[]
   statusHistories JobStatusHistory[]
+  skills          JobSkill[]
 
   @@index([companyId])
   @@index([status])
   @@index([updatedAt])
+}
+
+model Skill {
+  id             String      @id @default(uuid()) @db.Uuid
+  name           String      @unique
+  normalizedName String      @unique
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+  userSkills     UserSkill[]
+  jobSkills      JobSkill[]
+}
+
+model UserSkill {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @db.Uuid
+  skillId    String     @db.Uuid
+  level      SkillLevel
+  yearsLabel String?
+  color      String?
+  createdAt  DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime   @updatedAt @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@index([userId])
+}
+
+model JobSkill {
+  id        String       @id @default(uuid()) @db.Uuid
+  jobId     String       @db.Uuid
+  skillId   String       @db.Uuid
+  kind      JobSkillKind
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, skillId, kind])
+  @@index([jobId])
 }
 
 model Interview {
@@ -137,6 +184,17 @@ enum JobStatusChangeType {
   ADVANCE
   CORRECTION
   UNDO
+}
+
+enum SkillLevel {
+  PROFICIENT
+  INTERMEDIATE
+  BEGINNER
+}
+
+enum JobSkillKind {
+  REQUIRED
+  BONUS
 }
 
 enum JobStatus {

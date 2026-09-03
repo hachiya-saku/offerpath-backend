@@ -14,8 +14,18 @@ const compareMock = jest.mocked(compare);
 const refreshHash = (token: string) =>
   createHash('sha256').update(token).digest('hex');
 
+type CreateRefreshSessionArgs = {
+  data: {
+    id: string;
+    userId: string;
+    refreshTokenHash: string;
+    expiresAt: Date;
+  };
+};
+
 describe('AuthService', () => {
   let service: AuthService;
+  let createdSessionArgs: CreateRefreshSessionArgs | undefined;
 
   const prismaServiceMock = {
     user: {
@@ -23,7 +33,10 @@ describe('AuthService', () => {
       findUnique: jest.fn(),
     },
     refreshSession: {
-      create: jest.fn(),
+      create: jest.fn((args: CreateRefreshSessionArgs) => {
+        createdSessionArgs = args;
+        return Promise.resolve();
+      }),
       findUnique: jest.fn(),
       updateMany: jest.fn(),
       deleteMany: jest.fn(),
@@ -48,6 +61,7 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    createdSessionArgs = undefined;
     hashMock.mockResolvedValue('hashed-password');
     compareMock.mockResolvedValue(true);
     jwtServiceMock.signAsync.mockReset();
@@ -158,13 +172,13 @@ describe('AuthService', () => {
     });
     expect(compareMock).toHaveBeenCalledWith('password123', 'hashed-password');
     expect(jwtServiceMock.signAsync).toHaveBeenCalledTimes(2);
-    expect(prismaServiceMock.refreshSession.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: user.id,
-        refreshTokenHash: refreshHash('refresh-token'),
-        expiresAt: new Date(2_000_000_000 * 1000),
-      }),
-    });
+    expect(createdSessionArgs?.data.userId).toBe(user.id);
+    expect(createdSessionArgs?.data.refreshTokenHash).toBe(
+      refreshHash('refresh-token'),
+    );
+    expect(createdSessionArgs?.data.expiresAt).toEqual(
+      new Date(2_000_000_000 * 1000),
+    );
     expect(result).toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',

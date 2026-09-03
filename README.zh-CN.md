@@ -22,6 +22,19 @@ OfferPath Backend 是求职岗位管理平台 OfferPath 的 REST API 服务，�
 
 项目通过 Prisma 迁移和种子脚本管理 PostgreSQL 表结构与本地开发数据。
 
+## 演示数据
+
+```bash
+npx prisma db seed
+```
+
+Seed 会重建演示用户所属的样本数据，包括 6 家公司、6 个岗位、3 场面试、状态历史、个人技能和岗位技能，不会修改其他用户的数据。
+
+```text
+邮箱：demo@offerpath.local
+密码：offerpath2026
+```
+
 ## 当前完成
 
 - NestJS 基础项目

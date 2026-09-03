@@ -29,10 +29,11 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 - Global API prefix: `/api/v1`
 - CORS configuration for the frontend development server
 - Health endpoint: `GET /api/v1/health`
-- User, Company, and Job models with database migrations
+- User, RefreshSession, Company, and Job models with database migrations
 - Company CRUD API
 - Complete Job CRUD APIs
-- Email registration, password login, and access token issuance
+- Email registration, password login, access/refresh token rotation, and multi-device sessions
+- JWT authentication, per-user isolation, current-device logout, and profile APIs
 - Interview scheduling, listing, and transactional job status updates
 - Job status corrections, change history, and undo for mistaken interview progression
 - Unit and E2E tests with Jest and Supertest
@@ -43,7 +44,11 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Health check |
 | `POST` | `/api/v1/auth/register` | Register a user |
-| `POST` | `/api/v1/auth/login` | Log in and issue an access token |
+| `POST` | `/api/v1/auth/login` | Log in and create an independent device session |
+| `POST` | `/api/v1/auth/refresh` | Rotate the current session's token pair |
+| `POST` | `/api/v1/auth/logout` | Log out the current device session |
+| `GET` | `/api/v1/users/me` | Get the current user profile |
+| `PATCH` | `/api/v1/users/me` | Update the current user profile |
 | `GET` | `/api/v1/companies` | List companies |
 | `POST` | `/api/v1/companies` | Create a company |
 | `PATCH` | `/api/v1/companies/:id` | Update a company |
@@ -59,7 +64,7 @@ Prisma migrations and seed scripts manage the PostgreSQL schema and local develo
 | `GET` | `/api/v1/jobs/:id/status-history` | List job status history |
 | `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | Undo the latest interview progression |
 
-Authentication guards are not connected to the Company and Job APIs yet, so those endpoints still use the seeded demo user.
+Business endpoints require an Access Token and isolate data by the current JWT user. Each login creates an independent Refresh Session, allowing desktop and mobile sessions to coexist; refresh and logout affect only the current device.
 
 ## Setup
 
@@ -73,6 +78,10 @@ Create `.env` from `.env.example` and provide the local PostgreSQL connection de
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 DATABASE_URL=postgresql://postgres:password@localhost:5432/offerpath
+JWT_ACCESS_SECRET=replace-with-a-long-random-secret
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=replace-with-another-long-random-secret
+JWT_REFRESH_EXPIRES_IN=7d
 ```
 
 ```bash
@@ -92,8 +101,8 @@ npm run test:e2e
 
 ## Planned development
 
-1. Add refresh tokens, logout, and authentication guards
-2. Add job search, filtering, and pagination
-3. Add application status history
-4. Add skill profiles and match score calculation
-5. Add dashboard aggregation endpoints
+1. Add job search, filtering, and pagination
+2. Add interview detail, editing, and deletion
+3. Add skill profiles and match score calculation
+4. Add dashboard aggregation endpoints
+5. Add structured parsing from job URLs

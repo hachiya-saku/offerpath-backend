@@ -29,6 +29,6 @@ export class AuthController {
   @Post('logout')
   @UseGuards(AccessTokenGuard)
   logout(@CurrentUser() user: JwtPayload) {
-    return this.authService.logout(user.sub);
+    return this.authService.logout(user.sub, user.sessionId);
   }
 }

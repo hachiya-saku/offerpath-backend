@@ -90,11 +90,15 @@ describe('AuthController', () => {
     const user: JwtPayload = {
       sub: 'user-1',
       email: 'test@example.com',
+      sessionId: 'session-1',
     };
     const response = { message: 'Logged out successfully' };
     authServiceMock.logout.mockResolvedValue(response);
 
     await expect(controller.logout(user)).resolves.toEqual(response);
-    expect(authServiceMock.logout).toHaveBeenCalledWith(user.sub);
+    expect(authServiceMock.logout).toHaveBeenCalledWith(
+      user.sub,
+      user.sessionId,
+    );
   });
 });

@@ -13,6 +13,7 @@ describe('UsersController', () => {
   const user: JwtPayload = {
     sub: 'user-1',
     email: 'user@example.com',
+    sessionId: 'session-1',
   };
 
   beforeEach(async () => {

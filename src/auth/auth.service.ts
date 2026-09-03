@@ -27,8 +27,11 @@ export class AuthService {
     return createHash('sha256').update(refreshToken).digest('hex');
   }
 
-  private async issueTokenPair(user: { id: string; email: string }) {
-    const payload = { sub: user.id, email: user.email };
+  private async issueTokenPair(
+    user: { id: string; email: string },
+    sessionId: string,
+  ) {
+    const payload = { sub: user.id, email: user.email, sessionId };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
@@ -47,7 +50,15 @@ export class AuthService {
       }),
     ]);
 
-    return { accessToken, refreshToken };
+    const refreshPayload = this.jwtService.decode<{ exp: number }>(
+      refreshToken,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      refreshTokenExpiresAt: new Date(refreshPayload.exp * 1000),
+    };
   }
 
   async register(registerDto: RegisterDto) {
@@ -104,16 +115,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const { accessToken, refreshToken } = await this.issueTokenPair(user);
+    const sessionId = randomUUID();
+    const { accessToken, refreshToken, refreshTokenExpiresAt } =
+      await this.issueTokenPair(user, sessionId);
 
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    await this.prisma.passwordCredential.update({
-      where: {
-        userId: user.id,
-      },
+    await this.prisma.refreshSession.create({
       data: {
+        id: sessionId,
+        userId: user.id,
         refreshTokenHash,
+        expiresAt: refreshTokenExpiresAt,
       },
     });
 
@@ -142,40 +155,49 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const credential = await this.prisma.passwordCredential.findUnique({
+    if (!payload.sub || !payload.sessionId) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const session = await this.prisma.refreshSession.findUnique({
       where: {
-        userId: payload.sub,
+        id: payload.sessionId,
       },
       include: {
         user: true,
       },
     });
 
-    if (!credential?.refreshTokenHash) {
+    if (!session || session.userId !== payload.sub) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const isRefreshTokenValid =
-      this.hashRefreshToken(dto.refreshToken) === credential.refreshTokenHash;
+      this.hashRefreshToken(dto.refreshToken) === session.refreshTokenHash;
 
     if (!isRefreshTokenValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const { accessToken, refreshToken } = await this.issueTokenPair(
-      credential.user,
-    );
+    const { accessToken, refreshToken, refreshTokenExpiresAt } =
+      await this.issueTokenPair(session.user, session.id);
 
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
 
-    await this.prisma.passwordCredential.update({
+    const updateResult = await this.prisma.refreshSession.updateMany({
       where: {
-        userId: credential.user.id,
+        id: session.id,
+        refreshTokenHash: session.refreshTokenHash,
       },
       data: {
         refreshTokenHash,
+        expiresAt: refreshTokenExpiresAt,
       },
     });
+
+    if (updateResult.count !== 1) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
     return {
       accessToken,
@@ -183,13 +205,11 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string) {
-    await this.prisma.passwordCredential.updateMany({
+  async logout(userId: string, sessionId: string) {
+    await this.prisma.refreshSession.deleteMany({
       where: {
         userId,
-      },
-      data: {
-        refreshTokenHash: null,
+        id: sessionId,
       },
     });
 

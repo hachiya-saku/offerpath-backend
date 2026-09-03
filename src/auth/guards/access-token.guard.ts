@@ -34,6 +34,9 @@ export class AccessTokenGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
+      if (!payload.sub || !payload.email || !payload.sessionId) {
+        throw new UnauthorizedException('Invalid access token');
+      }
       (request as AuthenticatedRequest).user = payload;
     } catch {
       throw new UnauthorizedException('Invalid access token');

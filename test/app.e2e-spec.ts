@@ -52,6 +52,7 @@ describe('AppController (e2e)', () => {
       {
         sub: DEMO_USER_ID,
         email: DEMO_USER_EMAIL,
+        sessionId: '00000000-0000-4000-8000-000000000002',
       },
       {
         secret: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
@@ -66,7 +67,7 @@ describe('AppController (e2e)', () => {
       .expect({ status: 'ok', service: 'offerpath-backend' });
   });
 
-  it('/api/v1/auth refreshes tokens, rejects the old token, and logs out', async () => {
+  it('/api/v1/auth keeps device sessions independent during refresh and logout', async () => {
     const email = `auth-e2e-${Date.now()}@example.com`;
     const password = 'password123';
     let userId: string | undefined;
@@ -82,42 +83,73 @@ describe('AppController (e2e)', () => {
         .expect(201);
       userId = (registerResponse.body as { id: string }).id;
 
-      const loginResponse = await request(app.getHttpServer())
+      const firstLoginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email, password })
         .expect(201);
-      const loginTokens = loginResponse.body as {
+      const firstLoginTokens = firstLoginResponse.body as {
         accessToken: string;
         refreshToken: string;
       };
 
-      const refreshResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: loginTokens.refreshToken })
+      const secondLoginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email, password })
         .expect(201);
-      const refreshedTokens = refreshResponse.body as {
+      const secondLoginTokens = secondLoginResponse.body as {
         accessToken: string;
         refreshToken: string;
       };
 
-      expect(refreshedTokens.accessToken).not.toBe(loginTokens.accessToken);
-      expect(refreshedTokens.refreshToken).not.toBe(loginTokens.refreshToken);
+      expect(await prisma.refreshSession.count({ where: { userId } })).toBe(2);
+
+      const firstRefreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: firstLoginTokens.refreshToken })
+        .expect(201);
+      const firstRefreshedTokens = firstRefreshResponse.body as {
+        accessToken: string;
+        refreshToken: string;
+      };
+
+      expect(firstRefreshedTokens.accessToken).not.toBe(
+        firstLoginTokens.accessToken,
+      );
+      expect(firstRefreshedTokens.refreshToken).not.toBe(
+        firstLoginTokens.refreshToken,
+      );
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .send({ refreshToken: loginTokens.refreshToken })
+        .send({ refreshToken: firstLoginTokens.refreshToken })
         .expect(401);
+
+      const secondRefreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: secondLoginTokens.refreshToken })
+        .expect(201);
+      const secondRefreshedTokens = secondRefreshResponse.body as {
+        accessToken: string;
+        refreshToken: string;
+      };
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
-        .set('Authorization', `Bearer ${refreshedTokens.accessToken}`)
+        .set('Authorization', `Bearer ${firstRefreshedTokens.accessToken}`)
         .expect(201)
         .expect({ message: 'Logged out successfully' });
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .send({ refreshToken: refreshedTokens.refreshToken })
+        .send({ refreshToken: firstRefreshedTokens.refreshToken })
         .expect(401);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: secondRefreshedTokens.refreshToken })
+        .expect(201);
+
+      expect(await prisma.refreshSession.count({ where: { userId } })).toBe(1);
     } finally {
       if (userId) {
         await prisma.user.deleteMany({ where: { id: userId } });

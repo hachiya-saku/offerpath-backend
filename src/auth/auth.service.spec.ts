@@ -22,15 +22,17 @@ describe('AuthService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
     },
-    passwordCredential: {
+    refreshSession: {
+      create: jest.fn(),
       findUnique: jest.fn(),
-      update: jest.fn(),
       updateMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
   };
   const jwtServiceMock = {
     signAsync: jest.fn(),
     verifyAsync: jest.fn(),
+    decode: jest.fn(),
   };
   const configServiceMock = {
     getOrThrow: jest.fn((key: string) => {
@@ -50,6 +52,7 @@ describe('AuthService', () => {
     compareMock.mockResolvedValue(true);
     jwtServiceMock.signAsync.mockReset();
     jwtServiceMock.verifyAsync.mockReset();
+    jwtServiceMock.decode.mockReturnValue({ exp: 2_000_000_000 });
     jwtServiceMock.signAsync
       .mockResolvedValueOnce('access-token')
       .mockResolvedValueOnce('refresh-token');
@@ -155,9 +158,12 @@ describe('AuthService', () => {
     });
     expect(compareMock).toHaveBeenCalledWith('password123', 'hashed-password');
     expect(jwtServiceMock.signAsync).toHaveBeenCalledTimes(2);
-    expect(prismaServiceMock.passwordCredential.update).toHaveBeenCalledWith({
-      where: { userId: user.id },
-      data: { refreshTokenHash: refreshHash('refresh-token') },
+    expect(prismaServiceMock.refreshSession.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: user.id,
+        refreshTokenHash: refreshHash('refresh-token'),
+        expiresAt: new Date(2_000_000_000 * 1000),
+      }),
     });
     expect(result).toEqual({
       accessToken: 'access-token',
@@ -206,18 +212,27 @@ describe('AuthService', () => {
     jwtServiceMock.verifyAsync.mockResolvedValue({
       sub: user.id,
       email: user.email,
+      sessionId: 'session-1',
     });
-    prismaServiceMock.passwordCredential.findUnique.mockResolvedValue({
+    prismaServiceMock.refreshSession.findUnique.mockResolvedValue({
+      id: 'session-1',
       userId: user.id,
       refreshTokenHash: refreshHash('old-refresh-token'),
       user,
     });
+    prismaServiceMock.refreshSession.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await service.refresh({ refreshToken: 'old-refresh-token' });
 
-    expect(prismaServiceMock.passwordCredential.update).toHaveBeenCalledWith({
-      where: { userId: user.id },
-      data: { refreshTokenHash: refreshHash('refresh-token') },
+    expect(prismaServiceMock.refreshSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'session-1',
+        refreshTokenHash: refreshHash('old-refresh-token'),
+      },
+      data: {
+        refreshTokenHash: refreshHash('refresh-token'),
+        expiresAt: new Date(2_000_000_000 * 1000),
+      },
     });
     expect(result).toEqual({
       accessToken: 'access-token',
@@ -232,17 +247,18 @@ describe('AuthService', () => {
       service.refresh({ refreshToken: 'invalid-refresh-token' }),
     ).rejects.toThrow(UnauthorizedException);
 
-    expect(
-      prismaServiceMock.passwordCredential.findUnique,
-    ).not.toHaveBeenCalled();
+    expect(prismaServiceMock.refreshSession.findUnique).not.toHaveBeenCalled();
   });
 
   it('should reject a refresh token that does not match the stored hash', async () => {
     jwtServiceMock.verifyAsync.mockResolvedValue({
       sub: 'user-1',
       email: 'test@example.com',
+      sessionId: 'session-1',
     });
-    prismaServiceMock.passwordCredential.findUnique.mockResolvedValue({
+    prismaServiceMock.refreshSession.findUnique.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
       refreshTokenHash: 'stored-refresh-hash',
       user: { id: 'user-1', email: 'test@example.com' },
     });
@@ -250,22 +266,19 @@ describe('AuthService', () => {
       service.refresh({ refreshToken: 'old-refresh-token' }),
     ).rejects.toThrow(UnauthorizedException);
 
-    expect(prismaServiceMock.passwordCredential.update).not.toHaveBeenCalled();
+    expect(prismaServiceMock.refreshSession.updateMany).not.toHaveBeenCalled();
   });
 
-  it('should clear the refresh token hash on logout', async () => {
-    prismaServiceMock.passwordCredential.updateMany.mockResolvedValue({
+  it('should delete only the current session on logout', async () => {
+    prismaServiceMock.refreshSession.deleteMany.mockResolvedValue({
       count: 1,
     });
 
-    await expect(service.logout('user-1')).resolves.toEqual({
+    await expect(service.logout('user-1', 'session-1')).resolves.toEqual({
       message: 'Logged out successfully',
     });
-    expect(
-      prismaServiceMock.passwordCredential.updateMany,
-    ).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
-      data: { refreshTokenHash: null },
+    expect(prismaServiceMock.refreshSession.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1', id: 'session-1' },
     });
   });
 });

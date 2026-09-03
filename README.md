@@ -29,10 +29,11 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 - API プレフィックス: `/api/v1`
 - フロントエンド向け CORS 設定
 - ヘルスチェック: `GET /api/v1/health`
-- User / Company / Job データモデルとマイグレーション
+- User / RefreshSession / Company / Job データモデルとマイグレーション
 - Company CRUD API
 - Job CRUD API
-- メール登録、パスワードログイン、Access Token 発行
+- メール登録、パスワードログイン、Access / Refresh Token ローテーション、マルチデバイスセッション
+- JWT 認証、ユーザー単位のデータ分離、現在のデバイスのログアウト、プロフィール API
 - 面接予定の登録・一覧取得と求人ステータスの連動更新
 - 求人ステータスの修正・変更履歴と誤った面接進行の取り消し
 - Unit / E2E テスト（Jest / Supertest）
@@ -43,7 +44,11 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | ヘルスチェック |
 | `POST` | `/api/v1/auth/register` | ユーザー登録 |
-| `POST` | `/api/v1/auth/login` | ログインと Access Token 発行 |
+| `POST` | `/api/v1/auth/login` | ログインして独立したデバイスセッションを作成 |
+| `POST` | `/api/v1/auth/refresh` | 現在のセッションの Token ペアを更新 |
+| `POST` | `/api/v1/auth/logout` | 現在のデバイスセッションからログアウト |
+| `GET` | `/api/v1/users/me` | 現在のユーザープロフィールを取得 |
+| `PATCH` | `/api/v1/users/me` | 現在のユーザープロフィールを更新 |
 | `GET` | `/api/v1/companies` | 会社一覧 |
 | `POST` | `/api/v1/companies` | 会社作成 |
 | `PATCH` | `/api/v1/companies/:id` | 会社更新 |
@@ -59,7 +64,7 @@ Prisma のマイグレーションとシードを使用して、PostgreSQL の�
 | `GET` | `/api/v1/jobs/:id/status-history` | 求人ステータス履歴を取得 |
 | `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | 直前の面接進行を取り消し |
 
-Company / Job API への認証ガード接続前のため、これらの API は現在シード済みのデモユーザーを使用します。
+業務 API は Access Token を必須とし、JWT の現在ユーザー単位でデータを分離します。ログインごとに独立した Refresh Session を作成するため、PC とスマートフォンで同時にログインでき、Token 更新とログアウトは現在のデバイスだけに影響します。
 
 ## セットアップ
 
@@ -73,6 +78,10 @@ npm install
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 DATABASE_URL=postgresql://postgres:password@localhost:5432/offerpath
+JWT_ACCESS_SECRET=replace-with-a-long-random-secret
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=replace-with-another-long-random-secret
+JWT_REFRESH_EXPIRES_IN=7d
 ```
 
 ## 開発コマンド
@@ -89,11 +98,11 @@ npm run test:e2e
 
 ## 開発予定
 
-1. Refresh Token、ログアウト、認証ガード
-2. 求人検索・絞り込み・ページネーション
-3. 応募ステータス履歴
-4. スキルプロフィールとマッチ度計算
-5. ダッシュボード集計 API
+1. 求人検索・絞り込み・ページネーション
+2. 面接詳細・編集・削除
+3. スキルプロフィールとマッチ度計算
+4. ダッシュボード集計 API
+5. 求人 URL の構造化解析
 
 ## リポジトリ構成
 

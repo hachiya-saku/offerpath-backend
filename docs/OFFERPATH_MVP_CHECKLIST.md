@@ -45,7 +45,7 @@
 - [x] 从临时 DEMO_USER_ID 切换为 JWT 当前用户
 - [x] Access Token 鉴权 Guard
 - [x] Refresh Token 刷新接口
-- [x] 退出登录与 Refresh Token 失效
+- [x] 多设备 Refresh Session、Token 轮换与当前设备退出
 - [x] 获取与修改当前用户资料接口
 - [x] 认证相关单元测试与 E2E
 

@@ -54,7 +54,11 @@ describe('AccessTokenGuard', () => {
 
   it('should attach a valid payload to the request', async () => {
     const { context, request } = createContext('Bearer valid-token');
-    const payload = { sub: 'user-1', email: 'user@example.com' };
+    const payload = {
+      sub: 'user-1',
+      email: 'user@example.com',
+      sessionId: 'session-1',
+    };
     jwtServiceMock.verifyAsync.mockResolvedValue(payload);
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
@@ -62,5 +66,17 @@ describe('AccessTokenGuard', () => {
       secret: 'access-secret',
     });
     expect(request).toMatchObject({ user: payload });
+  });
+
+  it('should reject a token without a session ID', async () => {
+    const { context } = createContext('Bearer legacy-token');
+    jwtServiceMock.verifyAsync.mockResolvedValue({
+      sub: 'user-1',
+      email: 'user@example.com',
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 });

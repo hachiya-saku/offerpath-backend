@@ -9,6 +9,7 @@ describe('JobsController', () => {
   const user: JwtPayload = {
     sub: 'authenticated-user',
     email: 'user@example.com',
+    sessionId: 'session-1',
   };
 
   const jobsServiceMock = {

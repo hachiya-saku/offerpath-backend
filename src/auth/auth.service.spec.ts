@@ -236,7 +236,7 @@ describe('AuthService', () => {
     });
     prismaServiceMock.refreshSession.updateMany.mockResolvedValue({ count: 1 });
 
-    const result = await service.refresh({ refreshToken: 'old-refresh-token' });
+    const result = await service.refresh('old-refresh-token');
 
     expect(prismaServiceMock.refreshSession.updateMany).toHaveBeenCalledWith({
       where: {
@@ -257,9 +257,9 @@ describe('AuthService', () => {
   it('should reject an invalid refresh token signature', async () => {
     jwtServiceMock.verifyAsync.mockRejectedValue(new Error('invalid token'));
 
-    await expect(
-      service.refresh({ refreshToken: 'invalid-refresh-token' }),
-    ).rejects.toThrow(UnauthorizedException);
+    await expect(service.refresh('invalid-refresh-token')).rejects.toThrow(
+      UnauthorizedException,
+    );
 
     expect(prismaServiceMock.refreshSession.findUnique).not.toHaveBeenCalled();
   });
@@ -276,9 +276,9 @@ describe('AuthService', () => {
       refreshTokenHash: 'stored-refresh-hash',
       user: { id: 'user-1', email: 'test@example.com' },
     });
-    await expect(
-      service.refresh({ refreshToken: 'old-refresh-token' }),
-    ).rejects.toThrow(UnauthorizedException);
+    await expect(service.refresh('old-refresh-token')).rejects.toThrow(
+      UnauthorizedException,
+    );
 
     expect(prismaServiceMock.refreshSession.updateMany).not.toHaveBeenCalled();
   });

@@ -10,7 +10,6 @@ import { hash, compare } from 'bcryptjs';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import type { JwtPayload } from './types/jwt-payload.type';
 
 const SALT_ROUNDS = 12;
@@ -141,16 +140,13 @@ export class AuthService {
     };
   }
 
-  async refresh(dto: RefreshTokenDto) {
+  async refresh(refreshToken: string) {
     let payload: JwtPayload;
 
     try {
-      payload = await this.jwtService.verifyAsync<JwtPayload>(
-        dto.refreshToken,
-        {
-          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        },
-      );
+      payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      });
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -173,16 +169,19 @@ export class AuthService {
     }
 
     const isRefreshTokenValid =
-      this.hashRefreshToken(dto.refreshToken) === session.refreshTokenHash;
+      this.hashRefreshToken(refreshToken) === session.refreshTokenHash;
 
     if (!isRefreshTokenValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const { accessToken, refreshToken, refreshTokenExpiresAt } =
-      await this.issueTokenPair(session.user, session.id);
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      refreshTokenExpiresAt,
+    } = await this.issueTokenPair(session.user, session.id);
 
-    const refreshTokenHash = this.hashRefreshToken(refreshToken);
+    const refreshTokenHash = this.hashRefreshToken(newRefreshToken);
 
     const updateResult = await this.prisma.refreshSession.updateMany({
       where: {
@@ -201,7 +200,7 @@ export class AuthService {
 
     return {
       accessToken,
-      refreshToken,
+      refreshToken: newRefreshToken,
     };
   }
 

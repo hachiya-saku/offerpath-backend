@@ -10,15 +10,15 @@ OfferPath Backend は、求職管理プラットフォーム OfferPath の REST 
 
 ## 技術スタック
 
-| 分類 | 技術 |
-| --- | --- |
-| ランタイム | Node.js 24 |
-| フレームワーク | NestJS 11 |
-| 言語 | TypeScript |
-| データベース | PostgreSQL 18 |
-| ORM | Prisma 7 |
-| テスト | Jest / Supertest |
-| パッケージ管理 | npm |
+| 分類           | 技術             |
+| -------------- | ---------------- |
+| ランタイム     | Node.js 24       |
+| フレームワーク | NestJS 11        |
+| 言語           | TypeScript       |
+| データベース   | PostgreSQL 18    |
+| ORM            | Prisma 7         |
+| テスト         | Jest / Supertest |
+| パッケージ管理 | npm              |
 
 Prisma のマイグレーションとシードを使用して、PostgreSQL のスキーマと開発用データを管理します。
 
@@ -53,29 +53,29 @@ Seed はデモユーザーが所有するサンプルデータを再作成しま
 
 ## API
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/api/v1/health` | ヘルスチェック |
-| `POST` | `/api/v1/auth/register` | ユーザー登録 |
-| `POST` | `/api/v1/auth/login` | ログインして独立したデバイスセッションを作成 |
-| `POST` | `/api/v1/auth/refresh` | 現在のセッションの Token ペアを更新 |
-| `POST` | `/api/v1/auth/logout` | 現在のデバイスセッションからログアウト |
-| `GET` | `/api/v1/users/me` | 現在のユーザープロフィールを取得 |
-| `PATCH` | `/api/v1/users/me` | 現在のユーザープロフィールを更新 |
-| `GET` | `/api/v1/companies` | 会社一覧 |
-| `POST` | `/api/v1/companies` | 会社作成 |
-| `PATCH` | `/api/v1/companies/:id` | 会社更新 |
-| `DELETE` | `/api/v1/companies/:id` | 会社削除 |
-| `POST` | `/api/v1/jobs` | 求人作成（会社を検索または自動作成） |
-| `GET` | `/api/v1/jobs` | 求人一覧 |
-| `GET` | `/api/v1/jobs/:id` | 求人詳細 |
-| `PATCH` | `/api/v1/jobs/:id` | 求人更新 |
-| `DELETE` | `/api/v1/jobs/:id` | 求人削除 |
-| `POST` | `/api/v1/jobs/:id/interviews` | 次回面接を登録してステータスを更新 |
-| `GET` | `/api/v1/interviews` | 面接予定一覧 |
-| `PATCH` | `/api/v1/jobs/:id/status` | 求人ステータスを修正して理由を記録 |
-| `GET` | `/api/v1/jobs/:id/status-history` | 求人ステータス履歴を取得 |
-| `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | 直前の面接進行を取り消し |
+| Method   | Endpoint                                        | Description                                                      |
+| -------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| `GET`    | `/api/v1/health`                                | ヘルスチェック                                                   |
+| `POST`   | `/api/v1/auth/register`                         | ユーザー登録                                                     |
+| `POST`   | `/api/v1/auth/login`                            | ログインし、デバイス別の Refresh Token を HttpOnly Cookie に保存 |
+| `POST`   | `/api/v1/auth/refresh`                          | Cookie の Refresh Token をローテーションして Access Token を更新 |
+| `POST`   | `/api/v1/auth/logout`                           | 現在のデバイスセッションを削除し、Refresh Cookie をクリア        |
+| `GET`    | `/api/v1/users/me`                              | 現在のユーザープロフィールを取得                                 |
+| `PATCH`  | `/api/v1/users/me`                              | 現在のユーザープロフィールを更新                                 |
+| `GET`    | `/api/v1/companies`                             | 会社一覧                                                         |
+| `POST`   | `/api/v1/companies`                             | 会社作成                                                         |
+| `PATCH`  | `/api/v1/companies/:id`                         | 会社更新                                                         |
+| `DELETE` | `/api/v1/companies/:id`                         | 会社削除                                                         |
+| `POST`   | `/api/v1/jobs`                                  | 求人作成（会社を検索または自動作成）                             |
+| `GET`    | `/api/v1/jobs`                                  | 求人一覧                                                         |
+| `GET`    | `/api/v1/jobs/:id`                              | 求人詳細                                                         |
+| `PATCH`  | `/api/v1/jobs/:id`                              | 求人更新                                                         |
+| `DELETE` | `/api/v1/jobs/:id`                              | 求人削除                                                         |
+| `POST`   | `/api/v1/jobs/:id/interviews`                   | 次回面接を登録してステータスを更新                               |
+| `GET`    | `/api/v1/interviews`                            | 面接予定一覧                                                     |
+| `PATCH`  | `/api/v1/jobs/:id/status`                       | 求人ステータスを修正して理由を記録                               |
+| `GET`    | `/api/v1/jobs/:id/status-history`               | 求人ステータス履歴を取得                                         |
+| `DELETE` | `/api/v1/jobs/:id/interviews/:interviewId/undo` | 直前の面接進行を取り消し                                         |
 
 業務 API は Access Token を必須とし、JWT の現在ユーザー単位でデータを分離します。ログインごとに独立した Refresh Session を作成するため、PC とスマートフォンで同時にログインでき、Token 更新とログアウトは現在のデバイスだけに影響します。
 

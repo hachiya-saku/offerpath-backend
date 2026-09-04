@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
@@ -22,6 +23,7 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -83,71 +85,58 @@ describe('AppController (e2e)', () => {
         .expect(201);
       userId = (registerResponse.body as { id: string }).id;
 
-      const firstLoginResponse = await request(app.getHttpServer())
+      const firstDevice = request.agent(app.getHttpServer());
+      const secondDevice = request.agent(app.getHttpServer());
+
+      const firstLoginResponse = await firstDevice
         .post('/api/v1/auth/login')
         .send({ email, password })
         .expect(200);
       const firstLoginTokens = firstLoginResponse.body as {
         accessToken: string;
-        refreshToken: string;
       };
+      expect(firstLoginResponse.body).not.toHaveProperty('refreshToken');
+      expect(firstLoginResponse.headers['set-cookie']).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/refreshToken=.*HttpOnly/),
+        ]),
+      );
 
-      const secondLoginResponse = await request(app.getHttpServer())
+      const secondLoginResponse = await secondDevice
         .post('/api/v1/auth/login')
         .send({ email, password })
         .expect(200);
-      const secondLoginTokens = secondLoginResponse.body as {
-        accessToken: string;
-        refreshToken: string;
-      };
+      expect(secondLoginResponse.body).not.toHaveProperty('refreshToken');
 
       expect(await prisma.refreshSession.count({ where: { userId } })).toBe(2);
 
-      const firstRefreshResponse = await request(app.getHttpServer())
+      const firstRefreshResponse = await firstDevice
         .post('/api/v1/auth/refresh')
-        .send({ refreshToken: firstLoginTokens.refreshToken })
         .expect(200);
       const firstRefreshedTokens = firstRefreshResponse.body as {
         accessToken: string;
-        refreshToken: string;
       };
 
       expect(firstRefreshedTokens.accessToken).not.toBe(
         firstLoginTokens.accessToken,
       );
-      expect(firstRefreshedTokens.refreshToken).not.toBe(
-        firstLoginTokens.refreshToken,
-      );
+      expect(firstRefreshResponse.body).not.toHaveProperty('refreshToken');
 
       await request(app.getHttpServer())
         .post('/api/v1/auth/refresh')
-        .send({ refreshToken: firstLoginTokens.refreshToken })
         .expect(401);
 
-      const secondRefreshResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: secondLoginTokens.refreshToken })
-        .expect(200);
-      const secondRefreshedTokens = secondRefreshResponse.body as {
-        accessToken: string;
-        refreshToken: string;
-      };
+      await secondDevice.post('/api/v1/auth/refresh').expect(200);
 
-      await request(app.getHttpServer())
+      await firstDevice
         .post('/api/v1/auth/logout')
         .set('Authorization', `Bearer ${firstRefreshedTokens.accessToken}`)
         .expect(200)
         .expect({ message: 'Logged out successfully' });
 
-      await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: firstRefreshedTokens.refreshToken })
-        .expect(401);
+      await firstDevice.post('/api/v1/auth/refresh').expect(401);
 
-      await request(app.getHttpServer())
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: secondRefreshedTokens.refreshToken })
-        .expect(200);
+      await secondDevice.post('/api/v1/auth/refresh').expect(200);
 
       expect(await prisma.refreshSession.count({ where: { userId } })).toBe(1);
     } finally {

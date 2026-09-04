@@ -3,6 +3,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guards/access-token.guard';
 import type { JwtPayload } from './types/jwt-payload.type';
+import type { Request, Response } from 'express';
+import { REFRESH_TOKEN_COOKIE } from './utils/refresh-token-cookie';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -12,6 +14,19 @@ describe('AuthController', () => {
     login: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
+  };
+  const createResponseMock = () => {
+    const cookie = jest.fn();
+    const clearCookie = jest.fn();
+
+    return {
+      cookie,
+      clearCookie,
+      response: {
+        cookie,
+        clearCookie,
+      } as unknown as Response,
+    };
   };
 
   beforeEach(async () => {
@@ -68,22 +83,41 @@ describe('AuthController', () => {
     };
     authServiceMock.login.mockResolvedValue(loginResult);
 
-    const result = await controller.login(dto);
+    const responseMock = createResponseMock();
+    const result = await controller.login(dto, responseMock.response);
 
     expect(authServiceMock.login).toHaveBeenCalledWith(dto);
-    expect(result).toEqual(loginResult);
+    expect(responseMock.cookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN_COOKIE,
+      loginResult.refreshToken,
+      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
+    );
+    expect(result).toEqual({
+      accessToken: loginResult.accessToken,
+      user: loginResult.user,
+    });
   });
 
-  it('should forward refresh data to AuthService', async () => {
-    const dto = { refreshToken: 'refresh-token' };
+  it('should read, rotate, and hide the refresh token', async () => {
     const tokens = {
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
     };
     authServiceMock.refresh.mockResolvedValue(tokens);
+    const request = {
+      cookies: { [REFRESH_TOKEN_COOKIE]: 'refresh-token' },
+    } as unknown as Request;
+    const responseMock = createResponseMock();
 
-    await expect(controller.refresh(dto)).resolves.toEqual(tokens);
-    expect(authServiceMock.refresh).toHaveBeenCalledWith(dto);
+    await expect(
+      controller.refresh(request, responseMock.response),
+    ).resolves.toEqual({ accessToken: tokens.accessToken });
+    expect(authServiceMock.refresh).toHaveBeenCalledWith('refresh-token');
+    expect(responseMock.cookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN_COOKIE,
+      tokens.refreshToken,
+      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
+    );
   });
 
   it('should log out the current user', async () => {
@@ -94,11 +128,18 @@ describe('AuthController', () => {
     };
     const response = { message: 'Logged out successfully' };
     authServiceMock.logout.mockResolvedValue(response);
+    const responseMock = createResponseMock();
 
-    await expect(controller.logout(user)).resolves.toEqual(response);
+    await expect(
+      controller.logout(user, responseMock.response),
+    ).resolves.toEqual(response);
     expect(authServiceMock.logout).toHaveBeenCalledWith(
       user.sub,
       user.sessionId,
+    );
+    expect(responseMock.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN_COOKIE,
+      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
     );
   });
 });
